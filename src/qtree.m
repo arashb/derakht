@@ -9,7 +9,6 @@ classdef qtree < handle
   
 %/* ************************************************** */
 properties
-  gids    % global ids 
   kids    % kid structure  kids.m (size) kids.ptr{i}  pointeres
   parent  % parent of the node
   level   % level of the node 
@@ -28,7 +27,6 @@ if nargin<1, parent = [];           end;
 if nargin<2, level  = 0;            end;
 if nargin<3, anchor = [0,0];        end;
 
-this.gids   = [];
 this.kids   = [];
 this.parent = parent;
 this.level  = level;
@@ -109,15 +107,15 @@ end
 
     %/* ************************************************** */
     function [val] = do_refine(this, func, maxErrPerNode, maxLevel)
-        global verbose
+        %global verbose
         if this.level == maxLevel, val = false; return; end;
         m = 15;
         err = compute_error_rg(this, func, m);
         %err= compute_error_box_center(this, func)
-        if verbose
-            fprintf('node  at level %d: anchor:[%1.4f %1.4f] error: %e\n',...
-                this.level,this.anchor(1),this.anchor(2), err);
-        end
+%         if verbose
+%             fprintf('node  at level %d: anchor:[%1.4f %1.4f] error: %e\n',...
+%                 this.level,this.anchor(1),this.anchor(2), err);
+%         end
         if err <=  maxErrPerNode, val = false; return; end;
         val = true;
     end
@@ -237,7 +235,19 @@ function list=leaves(this)
   end
   this.preorder(@visit,[],[]);
 end
-  
+
+%/* ************************************************** */
+function list=nodes(this)
+% function list=nodes(this)  
+% collects all the nodes in a single array  
+  list={};
+  cnt=0;
+  function visit(this,dummy)
+      cnt=cnt+1;
+      list{cnt}=this;
+  end
+  this.preorder(@visit,[],[]);
+end
 
 %/* ************************************************** */
 function print(this)
@@ -260,8 +270,8 @@ function print_mids(this,leaves_only)
     if leaves_only & ~this.isleaf, return; end;
     fprintf('mid:');
     id = mid.id(this.level,this.anchor);
-    mid.print(id);
-    fprintf(': %20u at level %2d: anchor:[%1.4f %1.4f]\n',...
+    %mid.print(id);
+    fprintf(' %20u at level %2d: anchor:[%1.4f %1.4f]\n',...
             id, this.level,this.anchor(1),this.anchor(2));
 
   end
@@ -300,6 +310,69 @@ function plottree(this,markersize)
   this.preorder(plotnode,[],[]);
   hold off;
 end
-
 end % methods
+
+methods (Static)
+%/* ************************************************** */
+function lv_mids = tree2mids(tree, leaves_only)
+    if nargin < 2, leaves_only = false; end;
+    if leaves_only
+        lv_list = tree.leaves();
+    else
+        lv_list = tree.nodes();
+    end
+    lv_mids = zeros(size(lv_list),'uint64');
+    mid = morton_id;
+    for i=1:length(lv_list)
+        qt = lv_list{i};
+        lv_mids(i) = mid.id(qt.level,qt.anchor);
+    end
+end
+
+%/* ************************************************** */
+function tree = mids2tree(mids_list, leaves_only)
+    if nargin < 2, leaves_only = false; end;
+    if leaves_only
+    else
+        [tree, counter] = construct_tree([], mids_list, 1);
+    end
+    
+    %/* ************************************************** */
+    function [node, counter] = construct_tree(parent, mids_list, counter)
+        %if counter > length(mids_list), return; end;
+        global verbose
+        id = mids_list(counter);
+        mido = morton_id;
+        [lvl, anc] = mido.id2node(id);
+        if verbose
+            fprintf('construncting: %20u at level %2d: anchor:[%1.4f %1.4f]\n',...
+                id, lvl,anc(1),anc(2));
+        end
+        node = qtree(parent, lvl, anc);
+        counter = counter+1;
+        
+        % check for termination
+        if counter > length(mids_list), return; end;
+        [nlvl, nanc] = mido.id2node(mids_list(counter));
+        if nlvl <= lvl, return; end;
+        
+        node.isleaf = false;
+        % construnct the subtrees
+        [node.kids{1}, counter] = construct_tree(node, mids_list, counter);
+        [node.kids{2}, counter] = construct_tree(node, mids_list, counter);
+        [node.kids{3}, counter] = construct_tree(node, mids_list, counter);
+        [node.kids{4}, counter] = construct_tree(node, mids_list, counter);
+    end
+end
+
+%/* ************************************************** */
+function treec = merge(treea,treeb)
+    lvs_ids1 = qtree.tree2mids(treea);
+    lvs_ids2 = qtree.tree2mids(treeb);
+    lvs_ids_merged = unique([lvs_ids1, lvs_ids2]);    
+    treec = qtree.mids2tree(lvs_ids_merged);
+end
+end % methods static
+
+
 end % classdef
