@@ -54,9 +54,28 @@ for i=1:maxlevel
   mid=bitset(mid, lb+2*i  , bitget(iy,i) );
 end
 
-
 end % function id
 
+%/* ************************************************** */
+function [level, anchor] = id2node(o, id)
+    level = uint8(0);        
+    ix = uint32(0);
+    iy = uint32(0);
+    cb = o.tb-o.lb;
+    maxlevel = cb/2;
+    % set the level
+    for i=1:o.lb, 
+        level = bitset(level , i, bitget(id, i));
+    end
+    level = double(level);
+    % coordinates
+    for i=1:maxlevel
+        ix=bitset(ix, i, bitget(id, o.lb+2*i-1));%bitset(mid, lb+2*i-1, bitget(ix,i) );
+        iy=bitset(iy, i, bitget(id, o.lb+2*i));%bitset(mid, lb+2*i  , bitget(iy,i) );
+    end
+    anchor(1) = double(ix)/2^maxlevel;
+    anchor(2) = double(iy)/2^maxlevel;
+end
   
 %/* ************************************************** */
 function print(o,id)
@@ -69,8 +88,6 @@ function print(o,id)
   fprintf(' xy:');  for i=1:cb,      fprintf('%1d',bits(i));end
   fprintf(' lv:');  for i=cb+1:o.tb, fprintf('%1d',bits(i));end
 end  
-
-
 
 end % methods
 end % class
