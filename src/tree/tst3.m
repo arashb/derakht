@@ -6,6 +6,7 @@ global verbose;
 % RUN PARAMETERS
 maxErrorPerNode = 0.01;      % Error per box
 maxLevel        = 20;          % maximum tree depth
+resPerNode      = 10;          % Resolution per box
 verbose         = false;
 
 % plot the function
@@ -21,9 +22,9 @@ Z3 = gaussian(xx,yy);
 a = qtree;
 b = qtree;
 c = qtree;
-a.insert_function(@func1,maxErrorPerNode,maxLevel);
-b.insert_function(@func2,maxErrorPerNode,maxLevel);
-c.insert_function(@gaussian,maxErrorPerNode,maxLevel);
+a.insert_function(@func1,maxErrorPerNode,maxLevel,resPerNode);
+b.insert_function(@func2,maxErrorPerNode,maxLevel,resPerNode);
+c.insert_function(@gaussian,maxErrorPerNode,maxLevel,resPerNode);
 d = qtree.merge(a,b);
 e = qtree.merge(d,c);
 

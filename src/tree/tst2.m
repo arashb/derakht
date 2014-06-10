@@ -6,6 +6,7 @@ global verbose;
 % RUN PARAMETERS
 maxErrorPerNode = 0.001;      % Error per box
 maxLevel        = 20;          % maximum tree depth
+resPerNode      = 10;          % Resolution per box
 verbose         = true;
 
 res = 100;
@@ -17,9 +18,9 @@ Z2 = func2(xx,yy);
 Z3 = gaussian(xx,yy);
 
 a = qtree;
-a.insert_function(@func1,maxErrorPerNode,maxLevel);
-a.insert_function(@func2,maxErrorPerNode,maxLevel);
-a.insert_function(@gaussian,maxErrorPerNode,maxLevel);
+a.insert_function(@func1,maxErrorPerNode,maxLevel,resPerNode);
+a.insert_function(@func2,maxErrorPerNode,maxLevel,resPerNode);
+a.insert_function(@gaussian,maxErrorPerNode,maxLevel,resPerNode);
 
 subplot(1,2,1);
 contour(xx,yy,Z1);

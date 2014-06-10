@@ -90,28 +90,26 @@ this.isleaf = false;
 end
 
 %/* ************************************************** */
-% points = dim x num_of_points
-function insert_function(this, func, maxErrPerNode, maxLevel)
+function insert_function(this, func, maxErrPerNode, maxLevel, resPerNode)
 % This is the main construction routine for qtree.
- 
+if nargin < 5, resPerNode = 15; end;
+
 if this.isleaf
-    if ~do_refine(this, func, maxErrPerNode, maxLevel), return; end
+    if ~do_refine(this, func, maxErrPerNode, maxLevel, resPerNode), return; end
     % this node will be split;
     create_kids(this);
 end
 
 % now we insert the function to the kids
 for k=1:4
-    this.kids{k}.insert_function( func, maxErrPerNode, maxLevel);
+    this.kids{k}.insert_function( func, maxErrPerNode, maxLevel, resPerNode);
 end
 
     %/* ************************************************** */
-    function [val] = do_refine(this, func, maxErrPerNode, maxLevel)
+    function [val] = do_refine(this, func, maxErrPerNode, maxLevel, resPerNode)
         %global verbose
         if this.level == maxLevel, val = false; return; end;
-        m = 15;
-        err = compute_error_rg(this, func, m);
-        %err= compute_error_box_center(this, func)
+        err = compute_error(this, func, resPerNode);
 %         if verbose
 %             fprintf('node  at level %d: anchor:[%1.4f %1.4f] error: %e\n',...
 %                 this.level,this.anchor(1),this.anchor(2), err);
@@ -121,67 +119,30 @@ end
     end
     
     %/* ************************************************** */
-    function err= compute_error_rg(this, func, m)
+    function err= compute_error(this, func, m)
         % get the coordinates of the corners of the current box
-        [xmin,xmax,ymin,ymax]=corners(this);
-        
+        [xmin,xmax,ymin,ymax]=corners(this);        
         % create the regular grid in the box with resolution (m+1)^2
         xr = linspace(xmin, xmax, m+1);
         dx = (xmax - xmin)/m;
         yr = linspace(ymin, ymax, m+1);
         dy = (ymax - ymin)/m;
-        [xxr, yyr] = meshgrid(xr,yr);
-        
+        [xxr, yyr] = meshgrid(xr,yr);        
         % compute the function values on the regular grid points
-        fre = func(xxr,yyr);
-        
+        fre = func(xxr,yyr);        
         % compute the center of the regular grid cells
         xxc = xxr+dx/2;
         yyc = yyr+dy/2;
         xxcc = xxc(1:end-1,1:end-1);
-        yycc = yyc(1:end-1,1:end-1);
-        
+        yycc = yyc(1:end-1,1:end-1);        
         % compute the exact values on the centers
-        fce = func(xxcc, yycc);
-        
+        fce = func(xxcc, yycc);        
         % interpolate the function values on the center points
-        fci = interp2(xxr, yyr, fre, xxcc, yycc);
-        
+        fci = interp2(xxr, yyr, fre, xxcc, yycc);        
         % compute interpolation error
         diff = fci - fce;
         err = max(max(abs(diff)));
     end
-    
-    %/* ************************************************** */
-    function err= compute_error_box_center(this, func)
-        % get the coordinates of the corners of the current box
-        [xmin,xmax,ymin,ymax]=corners(this);
-        
-        % create the regular grid in the box with resolution (m+1)^2
-        xr = linspace(xmin, xmax, 2);
-        %dx = (xmax - xmin)/m;
-        yr = linspace(ymin, ymax, 2);
-        %dy = (ymax - ymin)/m;
-        [xxr, yyr] = meshgrid(xr,yr);
-        
-        % compute the function values on the regular grid points
-        fre = func(xxr,yyr);
-        
-        % compute the center of the regular grid cells
-        xc = 0.5*(xmin + xmax);
-        yc = 0.5*(ymin + ymax);
-        
-        % compute the exact values on the centers
-        fce = func(xc, yc);
-        
-        % interpolate the function values on the center point
-        fci = interp2(xxr, yyr, fre, xc, yc, 'linear');
-        
-        % compute interpolation error
-        diff = fci - fce;
-        err = abs(diff);
-    end
-    
 end
 
 %/* ************************************************** */

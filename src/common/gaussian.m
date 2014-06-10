@@ -5,7 +5,7 @@ if nargin<3, xcenter = 0.5; end;
 if nargin<4, ycenter = 0.5; end;
 if nargin<5, theta=0; end;
 if nargin<6, sigma_x = 0.05; end;
-if nargin<7, sigma_y = 0.05; end;
+if nargin<7, sigma_y = 0.09; end;
 
 A = 1;
 x0 = xcenter; 
