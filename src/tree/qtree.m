@@ -4,9 +4,7 @@ classdef qtree < handle
 %    preorder and postorder traversals
 %      
 % see "doc qtree" for documentation on methods and classes
-% see "nbody.m" for the 
 
-  
 %/* ************************************************** */
 properties
   kids    % kid structure  kids.m (size) kids.ptr{i}  pointeres
@@ -61,7 +59,20 @@ function [xmin,xmax,ymin,ymax]=corners(this)
   if xmax==1, xmax=1+eps; end 
   if ymax==1, ymax=1+eps; end;
 end
-  
+
+%/* ************************************************** */
+function [xxr,yyr,zzr,dx,dy,dz] = mesh(this, resPerNode)
+    % get the coordinates of the corners of the current box
+    [xmin,xmax,ymin,ymax]=corners(this);
+    dx = (xmax - xmin)/resPerNode;
+    dy = (ymax - ymin)/resPerNode;
+    dz = 0;
+    % create the regular grid in the box with resolution (m+1)^2
+    xr = linspace(xmin, xmax, resPerNode+1);
+    yr = linspace(ymin, ymax, resPerNode+1);
+    [xxr, yyr, zzr] = meshgrid(xr,yr,1:1);
+end
+
   
 %/* ************************************************** */
 function create_kids(this)  
@@ -107,42 +118,28 @@ end
 
     %/* ************************************************** */
     function [val] = do_refine(this, func, maxErrPerNode, maxLevel, resPerNode)
-        %global verbose
         if this.level == maxLevel, val = false; return; end;
         err = compute_error(this, func, resPerNode);
-%         if verbose
-%             fprintf('node  at level %d: anchor:[%1.4f %1.4f] error: %e\n',...
-%                 this.level,this.anchor(1),this.anchor(2), err);
-%         end
         if err <=  maxErrPerNode, val = false; return; end;
         val = true;
     end
     
-    %/* ************************************************** */
-    function err= compute_error(this, func, m)
-        % get the coordinates of the corners of the current box
-        [xmin,xmax,ymin,ymax]=corners(this);        
-        % create the regular grid in the box with resolution (m+1)^2
-        xr = linspace(xmin, xmax, m+1);
-        dx = (xmax - xmin)/m;
-        yr = linspace(ymin, ymax, m+1);
-        dy = (ymax - ymin)/m;
-        [xxr, yyr] = meshgrid(xr,yr);        
-        % compute the function values on the regular grid points
-        fre = func(xxr,yyr);        
-        % compute the center of the regular grid cells
-        xxc = xxr+dx/2;
-        yyc = yyr+dy/2;
-        xxcc = xxc(1:end-1,1:end-1);
-        yycc = yyc(1:end-1,1:end-1);        
-        % compute the exact values on the centers
-        fce = func(xxcc, yycc);        
-        % interpolate the function values on the center points
-        fci = interp2(xxr, yyr, fre, xxcc, yycc);        
-        % compute interpolation error
-        diff = fci - fce;
-        err = max(max(abs(diff)));
-    end
+end
+
+%/* ************************************************** */
+function idx = points_in_node(this, points)
+% function idx = points_in_node(this, points)  
+% idx : logical that has true for points within the node and
+%
+% the only complication is for points that lie right on 
+% the boundaries;
+  [xmin,xmax,ymin,ymax]=corners(this);
+
+% now find the points that are in the box
+  idx_x =  find(xmin <= points(1,:) & points(1,:) < xmax ) ;
+  idx_y =  find(ymin <= points(2,:) & points(2,:) < ymax ) ;
+  
+  idx = intersect(idx_x, idx_y);
 end
 
 %/* ************************************************** */
@@ -335,5 +332,24 @@ function treec = merge(treea,treeb)
 end
 end % methods static
 
-
+methods (Access = private)
+    %/* ************************************************** */
+    function err= compute_error(this, func, resPerNode)
+        [xxr,yyr,zzr,dx,dy,dz] = this.mesh(resPerNode);
+        % compute the function values on the local grid points
+        fre = func(xxr,yyr);   
+        % compute the center of the local grid cells
+        xxc = xxr+dx/2;
+        yyc = yyr+dy/2;
+        xxcc = xxc(1:end-1,1:end-1);
+        yycc = yyc(1:end-1,1:end-1);        
+        % compute the exact values on the centers
+        fce = func(xxcc, yycc);        
+        % interpolate the function values on the center points
+        fci = interp2(xxr, yyr, fre, xxcc, yycc);        
+        % compute interpolation error
+        diff = fci - fce;
+        err = max(max(abs(diff)));
+    end
+end % methods private
 end % classdef

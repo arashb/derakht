@@ -1,4 +1,4 @@
-function [ output_args ] = main( input_args )
+function main()
 %UNTITLED Summary of this function goes here
 %   Detailed explanation goes here
 clear all; clear globals; % constants  and preamble
@@ -7,47 +7,252 @@ addpath('./tree/');
 addpath('./common/');
 
 global verbose;
-global dim; dim = 2;
+global gvfreq;
+global dim;
+global DEBUG;
+global resPerNode;
+global maxErrorPerNode;
+global maxLevel;
 
 % RUN PARAMETERS
-maxErrorPerNode = 0.1;      % Error per box
-maxLevel        = 20;       % maximum tree depth
-resPerNode      = 15;       % Resolution per Node
+maxErrorPerNode = 0.001;        % Error per box
+maxLevel        = 20;           % Maximum tree depth
+resPerNode      = 15;           % Resolution per Node
 verbose         = false;
+gvfreq          = 1;
+dim             = 2;
+DEBUG           = true;
 
 % MAIN SCRIPT
 fconc = @func1;
-% fvelx = @func2;
-% fvely = @func3;
-% fvelz = @func4;
-
-% PLOT FUNCTION
-res = 1000;
-x = linspace(0,1,res);
-y = linspace(0,1,res);
-[xx,yy] = meshgrid(x,y);
-Z1 = fconc(xx,yy); 
-
-contour(xx,yy,Z1);
-colorbar;
-axis off;
-hold on;
+fvelx = @velx;
+fvely = @vely;
 
 % CONCENTRATION TREE
 c = qtree;
 c.insert_function(fconc,maxErrorPerNode,maxLevel,resPerNode);
-c.plottree
+tree_init_data(c, fconc, resPerNode);
 
-cleaves = c.leaves();
-for lvcnt = 1:length(cleaves)
-    cleaf = cleaves{lvcnt};
+% VELOCITY TREES
+u = qtree;
+u.insert_function(fvelx,maxErrorPerNode,maxLevel,resPerNode);
+tree_init_data(u, fvelx, resPerNode);
+
+v = qtree;
+v.insert_function(fvely,maxErrorPerNode,maxLevel,resPerNode);
+tree_init_data(v, fvely, resPerNode);
+
+% ADVECT
+c_atT = advect(c, {u,u,u,u}, {v,v,v,v});
+
+figure('Name','SEMI-LAG QUAD-TREES');
+MS='MarkerSize';
+
+subplot(3,3,2)
+c.plottree;
+hold on;
+[cxx,cyy,cvv] = tree_griddata(c);
+plot(cxx(:),cyy(:),'ro',MS,1); hold on;
+axis off; axis equal;
+title('c(t)');
+
+subplot(3,3,3)
+c_atT.plottree
+hold on;
+[ctxx,ctyy,ctvv] = tree_griddata(c_atT);
+plot(ctxx(:),ctyy(:),'ro',MS,1); hold on;
+axis off; axis equal;
+title('c(t+dt)');
+
+subplot(3,3,5)
+u.plottree;
+hold on;
+[uxx,uyy,uvv] = tree_griddata(u);
+plot(uxx(:),uyy(:),'bo',MS,1); hold on;
+axis off; axis equal;
+title('u(t)');
+
+subplot(3,3,8)
+v.plottree;
+hold on;
+[vxx,vyy,vvv] = tree_griddata(v);
+plot(vxx(:),vyy(:),'bo',MS,1); hold on;
+axis off; axis equal;
+title('v(t)');
+
+figure('Name','SEMI-LAG ADVECTION')
+subplot(1,2,1);
+plot3(cxx,cyy,cvv,'.',MS,1);
+title('c(t)');
+
+%vq = ctvv;
+vq = tree_interp_spatial(c, cxx+0.001, cyy);
+vq(isnan(vq)) = 0;
+subplot(1,2,2);
+plot3(ctxx,ctyy,vq,'.',MS,1);
+title('c(t+dt)');
 end
 
-    function value = func1(x,y)
-        xc = 0.5;
-        yc = 0.5;
-        value = gaussian(x,y,xc,yc);
+%/* ************************************************** */
+function [c_atT] = advect(ctree, ucells, vcells)
+global DEBUG;
+global maxErrorPerNode;
+global maxLevel;
+global resPerNode;
+
+% INIT THE C_atT
+% same structure as ctree
+% TODO: It will be changed later
+c_atT = qtree;
+c_atT.insert_function(@func1,maxErrorPerNode,maxLevel,resPerNode);
+
+% MERGE VELOCITY TREES
+um = merge(ucells);
+vm = merge(vcells);
+
+if DEBUG
+    n = length(ucells);
+    figure('Name','MERGED VEL. TREES');
+    for i=1:n
+        subplot(2,n,i)
+        ucells{i}.plottree;
+        axis off; axis equal;
     end
+    subplot(2,n,n+1)
+    um.plottree;
+    axis off; axis equal;
+end
+
+% INTERPOLATE VELOCITY VALUES ON THE MERGED TREE
+[umxx,umyy,umzz,umvalue] = tree_griddata(um);
+vq1 = tree_interp_spatial(ucells{1}, umxx, umyy);
+
+[vmxx,vmyy,vmzz,vmvalue] = tree_griddata(vm);
+
+% CONCENTRATION VALUES
+cleaves = ctree.leaves();
+for lvcnt = 1:length(cleaves)
+    cleaf = cleaves{lvcnt};
+    mesh = cleaf.data.mesh;
+    cxx = mesh{1}; cyy = mesh{2}; czz = mesh{3};    
+    %advect_sl_rk2(c, xx, yy, zz, u, v, w, t, tstep,dt, 'spline', 'spline')
+end
+end
+
+%/* ************************************************** */
+function mt = merge(treecells)
+mt = treecells{1};
+for i=2:length(treecells)
+    mt = qtree.merge(mt, treecells{i});
+end
+end
+
+%/* ************************************************** */
+function vq = tree_interp_spatial(tree, xq, yq)
+[xx,yy,vv] = tree_griddata(tree);
+vq = griddata(xx,yy,vv,xq,yq);
+end
+
+%/* ************************************************** */
+function [xx,yy,vv] = tree_griddata(tree)
+global resPerNode;
+xx = []; yy = []; vv = [];
+cleaves = tree.leaves();
+for lvcnt = 1:length(cleaves)
+    cleaf = cleaves{lvcnt};
+    % GRID POINTS
+    [xr,yr,zr,dx,dy,dz] = cleaf.mesh(resPerNode);
+    vals = cleaf.data.values;
+    xx = [xx; xr(:)];
+    yy = [yy; yr(:)];
+    vv = [vv; vals(:)];
+end
+end
+
+%/* ************************************************** */
+function tree_init_data(tree, func, resPerNode)
+cleaves = tree.leaves();
+for lvcnt = 1:length(cleaves)
+    cleaf = cleaves{lvcnt};
+    [xr,yr,zr,dx,dy,dz] = cleaf.mesh(resPerNode);
+    cvalues = func(xr,yr);
+    % TODO: get the correct dimension
+    cleaf.data.dim    = 1;
+    cleaf.data.values = cvalues;
+    cleaf.data.mesh = {xr,yr,zr,dx,dy,dz};
+end
+end
+
+%/* ************************************************** */
+% FIXME: plot all the leaves in the same graph
+function tree_plot_data(tree)
+cleaves = tree.leaves();
+%vals = [];
+for lvcnt = 1:length(cleaves)
+    cleaf = cleaves{lvcnt};
+    %vals = [vals, cleaf.data.values()];
+    figure;
+    node_plot_data(cleaf);
+end
+%contour(vals);
+end
+
+%/* ************************************************** */
+function node_plot_data(tree)
+dim  = tree.data.dim;
+vals = tree.data.values;
+mesh = tree.data.mesh;
+xx = mesh{1};
+yy = mesh{2};
+switch dim
+    case 1
+        hold on;
+        contour(xx,yy,vals);
+    case 2
+    case 3
+end
+end
+
+%/* ************************************************** */
+function value = func1(x,y)
+xc = 0.5;
+yc = 0.5;
+theta = 0;
+sigma = 0.05;
+value = gaussian(x,y,xc,yc,theta, sigma, sigma);
+end
+
+%/* ************************************************** */
+function value = velx(x,y)
+t = 0;
+z = 0;
+xc = 0.5*ones(size(x));
+yc = xc; zc = xc;
+[value,v,w] = vel_rot(t,x,y,z,xc,yc,zc);
+end
+
+%/* ************************************************** */
+function value = vely(x,y)
+t = 0;
+z = 0;
+xc = 0.5*ones(size(x));
+yc = xc; zc = xc;
+[u,value,w] = vel_rot(t,x,y,z,xc,yc,zc);
+end
+
+%/* ************************************************** */
+function value = vel(x,y)
+t = 0;
+z = 0;
+value = zeros(size(x));
+xc = 0.5*ones(size(x));
+yc = xc; zc = xc;
+[u,v,w] = vel_rot(t,x,y,z,xc,yc,zc);
+for i =1:size(x,1)
+    for j=1:size(y,2)
+        value(i,j) = norm([u(i,j), v(i,j)]);
+    end
+end
 end
 
 
