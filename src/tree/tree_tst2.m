@@ -1,4 +1,4 @@
-function tst2()
+function tree_tst2()
 % test the reconstruction of the quadtree based on the leaves morton ids
 clear; clear globals; dim=2;  % constants  and preamble
 global verbose;

@@ -1,4 +1,4 @@
-function tst3()
+function tree_tst3()
 % test the creation and merge of several quadtrees
 clear all; clear globals; dim=2;  % constants  and preamble
 global verbose;

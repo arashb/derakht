@@ -1,4 +1,4 @@
-function tst4()
+function tree_tst4()
 % test the creation of quadtree based on inserted function(s)
 clear all; clear globals; dim=2;  % constants  and preamble
 global verbose;
