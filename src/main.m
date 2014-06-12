@@ -1,7 +1,7 @@
 function main()
 %UNTITLED Summary of this function goes here
 %   Detailed explanation goes here
-clear all; clear globals; % constants  and preamble
+clear; clear globals; % constants  and preamble
 addpath semilag
 addpath tree
 addpath common
