@@ -117,6 +117,40 @@ classdef tree_data < handle
         end
         
         %/* ************************************************** */
+        function [tree_out] = collapse(tree_in)
+            % TODO: check that treecells have the exact same structure
+            %       -> mids of all treecells are the same.
+            % clone structure of the resulting tree from the input trees
+            num_trees = length(tree_in);
+            num_leaves = length(tree_in{1}.leaves());
+            tree_out = qtree.clone(tree_in{1});
+            
+            % get the leaves of input trees
+            tree_in_leaves = cell(num_trees,num_leaves);
+            for tree_in_cnt =1:num_trees
+                tree_in_leaves(tree_in_cnt,:) = tree_in{tree_in_cnt}.leaves();
+            end
+            
+            % iterate over leaves of tree out
+            tree_out_leaves = tree_out.leaves();
+            for leafcnt = 1:length(tree_out_leaves)
+                leaf = tree_out_leaves{leafcnt};
+                
+                tmp = tree_in_leaves{1,leafcnt};
+                leaf.data.dim           = num_trees;
+                leaf.data.resolution    = tmp.data.resolution;
+                % TODO: remove the one after extending the code to 3D
+                leaf.data.values        = zeros([size(tmp.data.values) 1 num_trees]);
+                
+                for tree_in_cnt = 1:num_trees
+                    tree_in_leaf = tree_in_leaves{tree_in_cnt,leafcnt};
+                    leaf.data.values(:,:,:,tree_in_cnt) = tree_in_leaf.data.values;
+                end
+            end
+            
+        end
+        
+        %/* ************************************************** */
         function plot_grid(tree)
             MS='MarkerSize';
             [txx,tyy] = tree_data.grid_points(tree);
@@ -127,7 +161,8 @@ classdef tree_data < handle
         end
         
         %/* ************************************************** */
-        function plot_values(tree,dim)
+        function plot_data(tree,dim)
+            if nargin < 2, dim = 1; end;
             MS='MarkerSize';
             [txx,tyy]   = tree_data.grid_points(tree);
             [tvv]       = tree_data.grid_data(tree);
