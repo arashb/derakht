@@ -34,7 +34,6 @@ this.anchor = anchor;
 
 end
 
-
 %/* ************************************************** */
 function h=width(this)
 % function h=width(this)
@@ -330,6 +329,14 @@ function treec = merge(treea,treeb)
     lvs_ids_merged = unique([lvs_ids1, lvs_ids2]);    
     treec = qtree.mids2tree(lvs_ids_merged);
 end
+
+
+%/* ************************************************** */
+function tree_clone = clone(tree_src)    
+        lvs_ids     = qtree.tree2mids(tree_src);
+        tree_clone  = qtree.mids2tree(lvs_ids);
+end
+
 end % methods static
 
 methods (Access = private)
