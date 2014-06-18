@@ -1,4 +1,4 @@
-function [ output_args ] = tst2( input_args )
+function tst2()
 %TST2 test of 2D semi-lagrangian
 clear; close all;
 addpath('../common/');

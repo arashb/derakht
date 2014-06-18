@@ -15,126 +15,129 @@ global maxErrorPerNode;
 global maxLevel;
 
 % RUN PARAMETERS
-maxErrorPerNode = 0.001;        % Error per box
+maxErrorPerNode = 0.0001;        % Error per box
 maxLevel        = 20;           % Maximum tree depth
 resPerNode      = 15;           % Resolution per Node
 verbose         = false;
 gvfreq          = 1;
 dim             = 2;
-DEBUG           = false;
+DEBUG           = true;
 
 % MAIN SCRIPT
-fconc = @func1;
-fvelx = @velx;
-fvely = @vely;
+fconc       = @func1;
+fvel_valx   = @velx;
+fvel_valy   = @vely;
 
 % CONCENTRATION TREE
 c = qtree;
 c.insert_function(fconc,maxErrorPerNode,maxLevel,resPerNode);
-tree_init_data(c, fconc, resPerNode);
+tree_data.init_data(c,fconc,resPerNode);
 
 % VELOCITY TREES
 u = qtree;
-u.insert_function(fvelx,maxErrorPerNode,maxLevel,resPerNode);
-tree_init_data(u, fvelx, resPerNode);
+u.insert_function(fvel_valx,maxErrorPerNode,maxLevel,resPerNode);
+tree_data.init_data(u,fvel_valx,resPerNode);
 
 v = qtree;
-v.insert_function(fvely,maxErrorPerNode,maxLevel,resPerNode);
-tree_init_data(v, fvely, resPerNode);
+v.insert_function(fvel_valy,maxErrorPerNode,maxLevel,resPerNode);
+tree_data.init_data(v,fvel_valy,resPerNode);
 
 % ADVECT
-c_atT = advect(c, {u,u,u,u}, {v,v,v,v});
+ucells = {u,u,u,u};
+vcells = {v,v,v,v};
+c_atT = advect(c, ucells, vcells);
 
 figure('Name','SEMI-LAG QUAD-TREES');
-MS='MarkerSize';
 
 subplot(3,3,2)
-c.plottree;
-hold on;
-[cxx,cyy,cvv] = tree_griddata(c);
-plot(cxx(:),cyy(:),'ro',MS,1); hold on;
-axis off; axis equal;
+tree_data.plot_grid(c);
 title('c(t)');
 
 % subplot(3,3,3)
-% c_atT.plottree
-% hold on;
-% [ctxx,ctyy,ctvv] = tree_griddata(c_atT);
-% plot(ctxx(:),ctyy(:),'ro',MS,1); hold on;
-% axis off; axis equal;
+% tree_data.plot_grid(c_atT);
 % title('c(t+dt)');
 
 subplot(3,3,5)
-u.plottree;
-hold on;
-[uxx,uyy,uvv] = tree_griddata(u);
-plot(uxx(:),uyy(:),'bo',MS,1); hold on;
-axis off; axis equal;
+tree_data.plot_grid(u);
 title('u(t)');
 
 subplot(3,3,8)
-v.plottree;
-hold on;
-[vxx,vyy,vvv] = tree_griddata(v);
-plot(vxx(:),vyy(:),'bo',MS,1); hold on;
-axis off; axis equal;
+tree_data.plot_grid(v);
 title('v(t)');
 
 figure('Name','SEMI-LAG ADVECTION')
 subplot(1,2,1);
-plot3(cxx,cyy,cvv,'.',MS,1);
+tree_data.plot_data(c)
 title('c(t)');
 
 % subplot(1,2,2);
-% plot3(ctxx,ctyy,vq,'.',MS,1);
+%tree_data.plot_values(c_atT);
 % title('c(t+dt)');
 end
 
 %/* ************************************************** */
 function [c_atT] = advect(ctree, ucells, vcells)
 global DEBUG;
-global maxErrorPerNode;
-global maxLevel;
-global resPerNode;
 
 % INIT THE C_atT
 % same structure as ctree
 % TODO: It will be changed later
-c_atT = qtree;
-c_atT.insert_function(@func1,maxErrorPerNode,maxLevel,resPerNode);
+c_atT = qtree.clone(ctree);
 
 % MERGE VELOCITY TREES
-um = merge(ucells);
-vm = merge(vcells);
+num     = size(ucells,2);
+
+um      = merge(ucells);
+umcells = clone(um,num);
+
+vm      = merge(vcells);
+vmcells = clone(vm,num);
+
+% INTERPOLATE VELOCITY VALUES ON THE MERGED TREE
+for i =1:num
+    tree_data.interp(ucells{i}, umcells{i});
+    tree_data.interp(vcells{i}, vmcells{i});
+end
+
+um_col = tree_data.collapse(umcells);
+vm_col = tree_data.collapse(vmcells);
 
 if DEBUG
     n = length(ucells);
     figure('Name','MERGED VEL. TREES');
     for i=1:n
-        subplot(2,n,i)
-        ucells{i}.plottree;
-        axis off; axis equal;
+        subplot(3,n,i)
+        tree_data.plot_data(ucells{i});
+        subplot(3,n,n+i)
+        tree_data.plot_data(umcells{i});
     end
-    subplot(2,n,n+1)
-    um.plottree;
+    subplot(3,n,2*n+1);
+    um.plottree
     axis off; axis equal;
 end
 
-% INTERPOLATE VELOCITY VALUES ON THE MERGED TREE
-tree_interp(ucells{1}, um);
-
 % CONCENTRATION VALUES
-cleaves = ctree.leaves();
+cleaves     = ctree.leaves();
+cTleaves    = c_atT.leaves();
 for lvcnt = 1:length(cleaves)
-    cleaf = cleaves{lvcnt};
-    %advect_sl_rk2(c, xx, yy, zz, u, v, w, t, tstep,dt, 'spline', 'spline')
+    cleaf  = cleaves{lvcnt};
+    cTleaf = cTleaves{lvcnt};
+    % = advect_sl_rk2(c, xx, yy, zz, u, v, w, t, tstep,dt, 'spline', 'spline')
 end
 
     %/* ************************************************** */
-    function mt = merge(treecells)
+    function [mt] = merge(treecells)
         mt = treecells{1};
         for counter=2:length(treecells)
             mt = qtree.merge(mt, treecells{counter});
+        end
+    end
+
+    %/* ************************************************** */
+    function [tree_clones] = clone(tree_src, num)
+        tree_clones = cell(1,num);
+        for counter=1:num
+            tree_clones{counter} = qtree.clone(tree_src);
         end
     end
 end
@@ -144,30 +147,41 @@ function value = func1(x,y)
 xc = 0.5;
 yc = 0.5;
 theta = 0;
-sigma = 0.05;
-value = gaussian(x,y,xc,yc,theta, sigma, sigma);
+sigmax = 0.05;
+sigmay = 0.09;
+value = gaussian(x,y,xc,yc,theta, sigmax, sigmay);
 end
 
 %/* ************************************************** */
 function value = velx(x,y)
-t = 0;
-z = 0;
-xc = 0.5*ones(size(x));
-yc = xc; zc = xc;
-[value,v,w] = vel_rot(t,x,y,z,xc,yc,zc);
+    [u,v,w] = vel_values(x,y);
+    value = u(:,:,:,2);
 end
 
 %/* ************************************************** */
 function value = vely(x,y)
-t = 0;
-z = 0;
-xc = 0.5*ones(size(x));
-yc = xc; zc = xc;
-[u,value,w] = vel_rot(t,x,y,z,xc,yc,zc);
+    [u,v,w] = vel_values(x,y);
+    value = v(:,:,:,2);
 end
 
 %/* ************************************************** */
-function value = vel(x,y)
+function [u,v,w] = vel_values(x,y)
+z = 0;
+xc = 0.5*ones(size(x));
+yc = xc; zc = xc;
+dt = 0.01;
+ti = 0;
+tlist = linspace(ti-dt,ti+2*dt,4);
+u = zeros([size(x) 1 length(tlist)]);
+v = u; w = u;
+for tcnt = 1:length(tlist)
+    t = tlist(tcnt);
+    [u(:,:,:,tcnt),v(:,:,:,tcnt),w(:,:,:,tcnt)] = vel_rot(t,x,y,z,xc,yc,zc);
+end
+end
+
+%/* ************************************************** */
+function value = velnorm(x,y)
 t = 0;
 z = 0;
 value = zeros(size(x));

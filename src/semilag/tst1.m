@@ -1,6 +1,6 @@
 function [] = tst1()
-clear
-close all
+clear; close all;
+clear global;
 addpath('../common/');
 PLOT_SOL = 1;
 VF_TYPE = 1;                    % type of velocity field
@@ -9,14 +9,21 @@ ERR_TYPE = 1;                   % type of error computation (L_2, L_inifinite, .
 RES_PATH = './';                % path to save results
 fig_format = '.pdf';
 INTERP_LIST = {'linear','cubic','spline'};
+% INTERP_LIST = {'linear'};
+% INTERP_LIST = {'cubic'};
+% INTERP_LIST = {'spline'};
 VFREQ_LIST = [5];
 global gvfreq;
 global dim;
-dim = 3;
+global verbose;
+
+dim     = 3;
+verbose = false;
+
 xi      = 0;
 xf      = 1;
 ti      = 0;
-n_level = [4 5];
+n_level = [4 5 6 7];
 n_list  = 2.^n_level;
 tn      = 1;
 cfl     = 1;
@@ -37,25 +44,21 @@ for ncnt =1:length(n_list)
     x = linspace(xi,xf,n+1);
     [xx, yy, zz] = meshgrid(x, x, x);
     height = round(2*(n+1)/3);      % used for slicing the cylinder
-    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    % Init the fields
-    [ u, v, w, cinit ] = init_fields(xi, xf, dx, xx, yy, zz, ti, dt, VF_TYPE, CF_TYPE);
-    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    % (1) compute the analytical solution
-    % TODO: extend for every possible velocity field
+    
+    [ u, v, w, cinit ] = init_fields(xi, xf, dx, xx, yy, zz, ti, dt, VF_TYPE, CF_TYPE);    
     csol = compute_analytical(xi, xf, ti, tf, xx, yy, zz, CF_TYPE);
-    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    % (2) compute solution using rk2 scheme
+    
     crk2 = compute_numerical(cinit, xx, yy, zz, u, v, w, ti, dt, tn, INTERP_TYPE, 'rk2');
     error_rk2(interptypecnt,ncnt,fcnt) = compute_error(crk2(3:end-2,3:end-2,3:end-2,end), csol(3:end-2,3:end-2,3:end-2), ERR_TYPE);
     fprintf('rk2 error =  %e\n',error_rk2(interptypecnt,ncnt,fcnt));
-    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    %(3) compute solution using 2tl scheme
-    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-    %c2tl = compute_numerical(cinit, xx, yy, zz, u, v, w, dt, tn, INTERP_TYPE, '2tl');
-    %fprintf('2tl error =  %e\n',compute_error(c2tl(:,:,:,end), csol, ERR_TYPE));
+
+    c2tl = compute_numerical(cinit, xx, yy, zz, u, v, w, ti, dt, tn, INTERP_TYPE, '2tl');
+    error_2tl(interptypecnt,ncnt,fcnt) = compute_error(c2tl(3:end-2,3:end-2,3:end-2,end), csol(3:end-2,3:end-2,3:end-2), ERR_TYPE);
+    fprintf('2tl error =  %e\n',error_2tl(interptypecnt,ncnt,fcnt));
+  
+    
     if PLOT_SOL
-        solfig = figure;
+        figure;
         subplot(3,2,1);
         surf(cinit(:,:,height)); title('INITIAL'); az = 0; el = 90; view(az, el);
         drawnow;
@@ -68,20 +71,20 @@ for ncnt =1:length(n_list)
         surf(crk2(:,:,height,end)); title('RK2');az = 0; el = 90; view(az, el);
         drawnow
         colorbar;
-    %     subplot(3,2,4);
-    %     surf(c2tl(:,:,height,end)); title('2TL'); az = 0; el = 90; view(az, el);
-    %     drawnow
-    %     colorbar;
+        subplot(3,2,4);
+        surf(c2tl(:,:,height,end)); title('2TL'); az = 0; el = 90; view(az, el);
+        drawnow
+        colorbar;
         subplot(3,2,5)
         diff_rk2 = crk2(:,:,:,end) - csol(:,:,:);
         surf(diff_rk2(:,:,height,end)); title('RK2 Error'); az = 0; el = 90; view(az, el);
         drawnow
         colorbar;
-    %     subplot(3,2,6)
-    %     diff_c2l = crk2(:,:,:,end) - csol(:,:,:);
-    %     surf(diff_c2l(:,:,height,end)); title('2TL Error'); az = 0; el = 90; view(az, el);
-    %     drawnow
-    %     colorbar;
+        subplot(3,2,6)
+        diff_c2l = c2tl(:,:,:,end) - csol(:,:,:);
+        surf(diff_c2l(:,:,height,end)); title('2TL Error'); az = 0; el = 90; view(az, el);
+        drawnow
+        colorbar;
         %pause
     end
     dx = dx/2;
@@ -116,10 +119,17 @@ for interptypecnt=1:length(INTERP_LIST)
         mes = sprintf('rk2-%s-vfreq%d',INTERP_LIST{interptypecnt},freq);
         legendInfo{end+1}= mes;
         hold on;
-%         semilogy(x_level,error_2tl(interptypecnt,:),'-s','Color',cmap(cmapcnt,:));
-%         cmapcnt= cmapcnt+1;
-%         mes = sprintf('%s-2tl',INTERP_LIST{interptypecnt});
-%         legendInfo{end+1}= mes;
+        i = semilogy(n_level,error_2tl(interptypecnt,:,fcnt));
+        mi = mod(cmapcnt,length(m)) + 1;
+        set(i, 'Marker', m{mi});
+        lsi = mod(cmapcnt,length(ls)) + 1;
+        set(i, 'LineStyle', ls{lsi});
+        ci = mod(cmapcnt, length(cmap)) + 1;
+        set(i, 'Color', cmap{ci});
+        cmapcnt= cmapcnt+1;
+        mes = sprintf('twotl-%s-vfreq%d',INTERP_LIST{interptypecnt},freq);
+        legendInfo{end+1}= mes;
+        hold on;
     end
 end
 legend(legendInfo);

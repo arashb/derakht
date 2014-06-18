@@ -1,6 +1,7 @@
 function tree_tst1()
 % test the creation of quadtree based on inserted function(s)
 clear all; clear globals; dim=2;  % constants  and preamble
+addpath('../common/');
 global verbose;
 
 % RUN PARAMETERS
