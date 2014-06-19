@@ -146,8 +146,7 @@ classdef tree_data < handle
                     tree_in_leaf = tree_in_leaves{tree_in_cnt,leafcnt};
                     leaf.data.values(:,:,:,tree_in_cnt) = tree_in_leaf.data.values;
                 end
-            end
-            
+            end            
         end
         
         %/* ************************************************** */
@@ -164,10 +163,12 @@ classdef tree_data < handle
         function plot_data(tree,dim)
             if nargin < 2, dim = 1; end;
             MS='MarkerSize';
+            tree.plottree
+            hold on
             [txx,tyy]   = tree_data.grid_points(tree);
             [tvv]       = tree_data.grid_data(tree);
-            plot3(txx,tyy,tvv(:,dim),'.',MS,1);
-            %axis off; 
+            scatter3(txx,tyy,tvv(:,dim),ones(size(txx)),tvv(:,dim),'filled')                        
+            axis off; 
             axis equal;
         end
     end

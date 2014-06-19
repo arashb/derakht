@@ -10,7 +10,7 @@ tt = ti;
 for taustep=1:n 
     [xt,yt,zt] = rk2(xt,yt,zt,fvel,tt,dt);
     if verbose        
-        plot(xt(:),yt(:),'gs','MarkerSize',8);  axis off; axis equal;    
+        plot(xt(:),yt(:),'gs','MarkerSize',8);  axis off; axis equal;
     end
     tt = tt + dt;
 end

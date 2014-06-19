@@ -15,7 +15,7 @@ global maxErrorPerNode;
 global maxLevel;
 
 % RUN PARAMETERS
-maxErrorPerNode = 0.0001;        % Error per box
+maxErrorPerNode = 0.01;        % Error per box
 maxLevel        = 20;           % Maximum tree depth
 resPerNode      = 15;           % Resolution per Node
 verbose         = false;
@@ -24,7 +24,7 @@ dim             = 2;
 DEBUG           = true;
 
 % MAIN SCRIPT
-fconc       = @func1;
+fconc       = @conc_tree;
 fvel_valx   = @velx;
 fvel_valy   = @vely;
 
@@ -70,19 +70,20 @@ subplot(1,2,1);
 tree_data.plot_data(c)
 title('c(t)');
 
-% subplot(1,2,2);
-%tree_data.plot_values(c_atT);
-% title('c(t+dt)');
+subplot(1,2,2);
+tree_data.plot_data(c_atT);
+title('c(t+dt)');
 end
 
 %/* ************************************************** */
-function [c_atT] = advect(ctree, ucells, vcells)
+function [ctree_next] = advect(ctree, ucells, vcells)
 global DEBUG;
+global resPerNode;
 
 % INIT THE C_atT
 % same structure as ctree
 % TODO: It will be changed later
-c_atT = qtree.clone(ctree);
+ctree_next = qtree.clone(ctree);
 
 % MERGE VELOCITY TREES
 num     = size(ucells,2);
@@ -117,13 +118,41 @@ if DEBUG
 end
 
 % CONCENTRATION VALUES
-cleaves     = ctree.leaves();
-cTleaves    = c_atT.leaves();
+cdepth = ctree.find_depth();
+cwidth = 1/2^cdepth;
+dx = cwidth/resPerNode;
+
+cfl = 100;
+om = 1;
+dt = cfl*dx/om;
+t = [-2*dt -dt 0 dt];
+tstep = 1;
+
+cleaves  = ctree.leaves();
+cTleaves = ctree_next.leaves();
+
 for lvcnt = 1:length(cleaves)
-    cleaf  = cleaves{lvcnt};
+    cleaf = cleaves{lvcnt};
     cTleaf = cTleaves{lvcnt};
-    % = advect_sl_rk2(c, xx, yy, zz, u, v, w, t, tstep,dt, 'spline', 'spline')
+    cTleaf.data.dim = cleaf.data.dim;
+    cTleaf.data.resolution = cleaf.data.resolution;
+    
+    [xx,yy,zz,dx,dy,dz] = cleaf.mesh(resPerNode);    
+    cval_next = semilag_rk2(@conc, @vel, xx, yy, zz, t, tstep);
+
+    cTleaf.data.values = cval_next;
 end
+
+
+    %/* ************************************************** */
+    function fconc(t,x,y,z)
+        % TODO
+    end
+
+    %/* ************************************************** */
+    function fvel(t,x,y,z)
+        % TODO
+    end
 
     %/* ************************************************** */
     function [mt] = merge(treecells)
@@ -143,13 +172,28 @@ end
 end
 
 %/* ************************************************** */
-function value = func1(x,y)
+function value = conc_tree(x,y)
+t=0; 
+z=0;
+value = conc(t,x,y,z);
+end
+
+%/* ************************************************** */
+function value = conc(t,x,y,z)
 xc = 0.5;
 yc = 0.5;
 theta = 0;
 sigmax = 0.05;
 sigmay = 0.09;
 value = gaussian(x,y,xc,yc,theta, sigmax, sigmay);
+end
+
+%/* ************************************************** */
+function [u,v,w] = vel(t,x,y,z)
+z = 0;
+xc = 0.5*ones(size(x));
+yc = xc; zc = xc;
+[u,v,w] = vel_rot(t,x,y,z,xc,yc,zc);
 end
 
 %/* ************************************************** */
