@@ -163,7 +163,7 @@ classdef tree_data < handle
         function plot_data(tree,dim)
             if nargin < 2, dim = 1; end;
             MS='MarkerSize';
-            tree.plottree
+            tree.plottree(0.5)
             hold on
             [txx,tyy]   = tree_data.grid_points(tree);
             [tvv]       = tree_data.grid_data(tree);
