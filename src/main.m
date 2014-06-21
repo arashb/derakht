@@ -13,15 +13,17 @@ global DEBUG;
 global resPerNode;
 global maxErrorPerNode;
 global maxLevel;
+global INTERP_TYPE;
 
 % RUN PARAMETERS
-maxErrorPerNode = 0.01;        % Error per box
+maxErrorPerNode = 0.001;        % Error per box
 maxLevel        = 20;           % Maximum tree depth
 resPerNode      = 15;           % Resolution per Node
 verbose         = false;
 gvfreq          = 1;
 dim             = 2;
 DEBUG           = true;
+INTERP_TYPE     = 'cubic';
 
 % MAIN SCRIPT
 fconc       = @conc_tree;
@@ -53,9 +55,9 @@ subplot(3,3,2)
 tree_data.plot_grid(c);
 title('c(t)');
 
-% subplot(3,3,3)
-% tree_data.plot_grid(c_atT);
-% title('c(t+dt)');
+subplot(3,3,3)
+tree_data.plot_grid(c_atT);
+title('c(t+dt)');
 
 subplot(3,3,5)
 tree_data.plot_grid(u);
@@ -65,20 +67,25 @@ subplot(3,3,8)
 tree_data.plot_grid(v);
 title('v(t)');
 
-figure('Name','SEMI-LAG ADVECTION')
+f = figure('Name','SEMI-LAG ADVECTION');
 subplot(1,2,1);
 tree_data.plot_data(c)
+colorbar;
 title('c(t)');
 
 subplot(1,2,2);
 tree_data.plot_data(c_atT);
+colorbar;
 title('c(t+dt)');
+
+saveas(f, 'resutls','eps');
 end
 
 %/* ************************************************** */
 function [ctree_next] = advect(ctree, ucells, vcells)
 global DEBUG;
 global resPerNode;
+global INTERP_TYPE;
 
 % INIT THE C_atT
 % same structure as ctree
@@ -87,12 +94,10 @@ ctree_next = qtree.clone(ctree);
 
 % MERGE VELOCITY TREES
 num     = size(ucells,2);
-
-um      = merge(ucells);
-umcells = clone(um,num);
-
-vm      = merge(vcells);
-vmcells = clone(vm,num);
+um_tree = merge(ucells);
+umcells = clone(um_tree,num);
+vm_tree = merge(vcells);
+vmcells = clone(vm_tree,num);
 
 % INTERPOLATE VELOCITY VALUES ON THE MERGED TREE
 for i =1:num
@@ -100,8 +105,9 @@ for i =1:num
     tree_data.interp(vcells{i}, vmcells{i});
 end
 
-um_col = tree_data.collapse(umcells);
-vm_col = tree_data.collapse(vmcells);
+um = tree_data.collapse(umcells);
+vm = tree_data.collapse(vmcells);
+
 
 if DEBUG
     n = length(ucells);
@@ -113,46 +119,52 @@ if DEBUG
         tree_data.plot_data(umcells{i});
     end
     subplot(3,n,2*n+1);
-    um.plottree
+    um_tree.plottree
     axis off; axis equal;
 end
 
-% CONCENTRATION VALUES
+% ADVECT CONCENTRATION VALUES
 cdepth = ctree.find_depth();
 cwidth = 1/2^cdepth;
 dx = cwidth/resPerNode;
 
-cfl = 100;
+cfl = 1;
 om = 1;
 dt = cfl*dx/om;
 t = [-2*dt -dt 0 dt];
 tstep = 1;
 
-cleaves  = ctree.leaves();
-cTleaves = ctree_next.leaves();
+% TODO: THIS IS GOING TO WORK ONLY FOR THE VELOCITY FIELD USED IN THIS
+% EXAMPLE -> GENERALIZE THE METHOD
+uc = qtree.clone(ctree);
+tree_data.interp(um,uc);
 
-for lvcnt = 1:length(cleaves)
-    cleaf = cleaves{lvcnt};
-    cTleaf = cTleaves{lvcnt};
-    cTleaf.data.dim = cleaf.data.dim;
-    cTleaf.data.resolution = cleaf.data.resolution;
+vc = qtree.clone(ctree);
+tree_data.interp(vm,vc);
+
+c_leaves     = ctree.leaves();
+cnext_leaves = ctree_next.leaves();
+uc_leaves    = uc.leaves();
+vc_leaves    = vc.leaves();
+
+for lvcnt = 1:length(c_leaves)
+    c_leaf      = c_leaves{lvcnt};
+    cnext_leaf  = cnext_leaves{lvcnt};
+    uc_leaf     = uc_leaves{lvcnt};
+    vc_leaf     = vc_leaves{lvcnt};
+        
+    [xx,yy,zz,dx,dy,dz] = c_leaf.mesh(resPerNode);
+    c = c_leaf.data.values;
+    u = uc_leaf.data.values;
+    v = vc_leaf.data.values;
+    w = zeros(size(u));
     
-    [xx,yy,zz,dx,dy,dz] = cleaf.mesh(resPerNode);    
-    cval_next = semilag_rk2(@conc, @vel, xx, yy, zz, t, tstep);
-
-    cTleaf.data.values = cval_next;
+    cnext_leaf.data.dim = c_leaf.data.dim;
+    cnext_leaf.data.resolution = c_leaf.data.resolution;
+    cnext_values = semilag_rk2(c,xx,yy,zz,@interp_conc, ...
+        u,v,w,t,@interp_vel_precomputed,tstep,INTERP_TYPE);
+    cnext_leaf.data.values(:,:,:) = cnext_values;
 end
-
-
-    %/* ************************************************** */
-    function fconc(t,x,y,z)
-        % TODO
-    end
-
-    %/* ************************************************** */
-    function fvel(t,x,y,z)
-        % TODO
-    end
 
     %/* ************************************************** */
     function [mt] = merge(treecells)

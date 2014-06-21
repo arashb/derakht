@@ -167,7 +167,8 @@ classdef tree_data < handle
             hold on
             [txx,tyy]   = tree_data.grid_points(tree);
             [tvv]       = tree_data.grid_data(tree);
-            scatter3(txx,tyy,tvv(:,dim),ones(size(txx)),tvv(:,dim),'filled')                        
+            scatter3(txx,tyy,tvv(:,dim),ones(size(txx)),tvv(:,dim),'filled')
+            %plot3(txx(:),tyy(:),tvv(:,dim),'.',MS,1)%,ones(size(txx)),tvv(:,dim),'filled')                        
             axis off; 
             axis equal;
         end
