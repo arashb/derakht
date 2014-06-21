@@ -1,4 +1,4 @@
-function [ cnew ] = semilag_2tl( interp_conc, xx, yy, zz, u, v, w, tstep, dt, vel_interp_method, conc_interp_method )
+function [ cnew ] = semilag_2tl(c,xx,yy,zz,interp_conc,u,v,w,tstep,dt,INTERP_TYPE)
 
 V2PREVTSTEP = 1;
 VPREVTSTEP  = 2;
@@ -25,9 +25,9 @@ for k=1:fpicnt
     yytmp = yy - yalpha*0.5;
     zztmp = zz - zalpha*0.5;
     
-    ut = interp3(xx, yy, zz, umidpoint, xxtmp, yytmp, zztmp, vel_interp_method);
-    vt = interp3(xx, yy, zz, vmidpoint, xxtmp, yytmp, zztmp, vel_interp_method);
-    wt = interp3(xx, yy, zz, wmidpoint, xxtmp, yytmp, zztmp, vel_interp_method);
+    ut = interp3(xx, yy, zz, umidpoint, xxtmp, yytmp, zztmp, INTERP_TYPE);
+    vt = interp3(xx, yy, zz, vmidpoint, xxtmp, yytmp, zztmp, INTERP_TYPE);
+    wt = interp3(xx, yy, zz, wmidpoint, xxtmp, yytmp, zztmp, INTERP_TYPE);
     
     out = xxtmp<0 | xxtmp>1  | yytmp<0 | yytmp>1 | zztmp<0 | zztmp>1;
     % TODO
@@ -47,6 +47,6 @@ xt = xx - xalpha;
 yt = yy - yalpha;
 zt = zz - zalpha;
 
-cnew = interp_conc(xt,yt,zt,tstep);
+cnew = interp_conc(c,xx,yy,zz,tstep,xt,yt,zt,INTERP_TYPE);
 end
 

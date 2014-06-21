@@ -9,8 +9,8 @@ ERR_TYPE = 1;                   % type of error computation (L_2, L_inifinite, .
 RES_PATH = './';                % path to save results
 fig_format = '.pdf';
 % INTERP_LIST = {'linear','cubic','spline'};
- INTERP_LIST = {'linear'};
-% INTERP_LIST = {'cubic'};
+% INTERP_LIST = {'linear'};
+ INTERP_LIST = {'cubic'};
 % INTERP_LIST = {'spline'};
 VFREQ_LIST = [5];
 global gvfreq;
@@ -85,11 +85,10 @@ for ncnt =1:length(n_list)
         surf(diff_c2l(:,:,height,end)); title('2TL Error'); az = 0; el = 90; view(az, el);
         drawnow
         colorbar;
-        %pause
     end
     dx = dx/2;
     dt = dt/2;
-end % 
+end  
 end
 end
 
