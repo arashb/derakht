@@ -86,7 +86,7 @@ classdef tree_data < handle
                         src_leaf = src_leaves{src_lvcnt};
                         
                         % find the points inside current source leaf
-                        indices = points_in_node(src_leaf, dst_xxr, dst_yyr);
+                        indices = tree_data.points_in_node(src_leaf, dst_xxr, dst_yyr);
                         if ~any(any(indices)), continue; end;
                         
                         xx = dst_xxr(indices);
@@ -104,15 +104,39 @@ classdef tree_data < handle
                     dst_leaf.data.values(:,:,:,dimcnt) = tmpval;
                 end
             end
+        end
+        
+        %/* ************************************************** */
+        function val = interp_points(src_tree,xq,yq,zq)
+            global verbose;
+            src_leaves  = src_tree.leaves();
+            resPerNode  = src_leaves{1}.data.resolution;
+            data_dim    = src_leaves{1}.data.dim;
             
-            %/* ************************************************** */
-            function indices = points_in_node(node, xx, yy)
-                % complication for points that lie right on
-                % the boundaries
-                [xmin,xmax,ymin,ymax]=corners(node);
-                idx = find(xmin <= xx & xx <= xmax);
-                idy = find(ymin <= yy & yy <= ymax);
-                indices = intersect(idx, idy);
+            val = zeros([size(xq) 1 data_dim]);
+            for dimcnt = 1:data_dim
+                % interpolate the destination values from corresponding source leaves
+                tmpval = zeros(size(xq));
+                for src_lvcnt =1:length(src_leaves)
+                    src_leaf = src_leaves{src_lvcnt};
+                    
+                    % find the points inside current source leaf
+                    indices = tree_data.points_in_node(src_leaf, xq, yq);
+                    if ~any(any(indices)), continue; end;
+                    
+                    xx = xq(indices);
+                    yy = yq(indices);
+                    if verbose
+                        fprintf('interpolate values of dst node %d from src node %d\n',dst_lvcnt, src_lvcnt);
+                    end
+                    
+                    [src_xxr,src_yyr,src_zzr,src_dx,src_dy,src_dz] = src_leaf.mesh(resPerNode);
+                    
+                    interp_data = src_leaf.data.values(:,:,:,dimcnt);
+                    vv = interp2(src_xxr,src_yyr,interp_data,xx,yy);
+                    tmpval(indices) = vv;
+                end
+                val = tmpval;
             end
         end
         
@@ -172,6 +196,18 @@ classdef tree_data < handle
             axis off; 
             axis equal;
         end
+        
+        %/* ************************************************** */
+        function indices = points_in_node(node, xx, yy)
+            % complication for points that lie right on
+            % the boundaries
+            [xmin,xmax,ymin,ymax]=corners(node);
+            idx = find(xmin <= xx & xx <= xmax);
+            idy = find(ymin <= yy & yy <= ymax);
+            indices = intersect(idx, idy);
+        end
     end
+    
+    
 end
 
