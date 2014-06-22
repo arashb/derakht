@@ -1,4 +1,4 @@
-function [ cnew ] = semilag_2tl(c,xx,yy,zz,interp_conc,u,v,w,tstep,dt,INTERP_TYPE)
+function [ cnew ] = semilag_2tl(xx,yy,zz,fconc,u,v,w,tstep,dt,INTERP_TYPE)
 
 V2PREVTSTEP = 1;
 VPREVTSTEP  = 2;
@@ -41,12 +41,10 @@ for k=1:fpicnt
     zalpha = dt * wt;    
 
 end
-
-
 xt = xx - xalpha;
 yt = yy - yalpha;
 zt = zz - zalpha;
 
-cnew = interp_conc(c,xx,yy,zz,tstep,xt,yt,zt,INTERP_TYPE);
+cnew = fconc(tstep,xt,yt,zt);
 end
 

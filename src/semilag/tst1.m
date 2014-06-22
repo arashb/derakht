@@ -8,9 +8,9 @@ CF_TYPE = 1;                    % type of intial concentration field
 ERR_TYPE = 1;                   % type of error computation (L_2, L_inifinite, ...)
 RES_PATH = './';                % path to save results
 fig_format = '.pdf';
-% INTERP_LIST = {'linear','cubic','spline'};
+%INTERP_LIST = {'linear','cubic','spline'};
 % INTERP_LIST = {'linear'};
- INTERP_LIST = {'cubic'};
+INTERP_LIST = {'cubic'};
 % INTERP_LIST = {'spline'};
 VFREQ_LIST = [5];
 global gvfreq;
@@ -23,7 +23,7 @@ verbose = false;
 xi      = 0;
 xf      = 1;
 ti      = 0;
-n_level = [4];
+n_level = [5];
 n_list  = 2.^n_level;
 tn      = 1;
 cfl     = 1;
@@ -60,31 +60,31 @@ for ncnt =1:length(n_list)
     if PLOT_SOL
         figure;
         subplot(3,2,1);
-        surf(cinit(:,:,height)); title('INITIAL'); az = 0; el = 90; view(az, el);
-        drawnow;
+        surf(cinit(:,:,height)); title('INITIAL'); az = 0; el = 90; view(az, el);        
         colorbar;
+        axis off; axis equal; drawnow; 
         subplot(3,2,2);
         surf(csol(:,:,height)); title('ANALYTICAL'); az = 0; el = 90; view(az, el);
-        drawnow;
         colorbar;
+        axis off; axis equal; drawnow;
         subplot(3,2,3)
         surf(crk2(:,:,height,end)); title('RK2');az = 0; el = 90; view(az, el);
-        drawnow
         colorbar;
+        axis off; axis equal; drawnow;
         subplot(3,2,4);
         surf(c2tl(:,:,height,end)); title('2TL'); az = 0; el = 90; view(az, el);
-        drawnow
         colorbar;
+        axis off; axis equal; drawnow;
         subplot(3,2,5)
         diff_rk2 = crk2(:,:,:,end) - csol(:,:,:);
         surf(diff_rk2(:,:,height,end)); title('RK2 Error'); az = 0; el = 90; view(az, el);
-        drawnow
         colorbar;
+        axis off; axis equal; drawnow;
         subplot(3,2,6)
         diff_c2l = c2tl(:,:,:,end) - csol(:,:,:);
         surf(diff_c2l(:,:,height,end)); title('2TL Error'); az = 0; el = 90; view(az, el);
-        drawnow
         colorbar;
+        axis off; axis equal; drawnow;
     end
     dx = dx/2;
     dt = dt/2;

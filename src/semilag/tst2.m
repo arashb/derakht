@@ -58,16 +58,16 @@ if PLOT_SOL
     solfig = figure;
     subplot(3,2,1);
     surf(cinit(:,:,height)); title('INITIAL'); az = 0; el = 90; view(az, el);
-    drawnow;
+    axis off; axis equal; drawnow;
     colorbar;
     subplot(3,2,2);
-    surf(csol(:,:,height)); title('ANALYTICAL'); az = 0; el = 90; view(az, el);
-    drawnow;
+    surf(csol(:,:,height)); title('ANALYTICAL'); az = 0; el = 90; view(az, el);    
     colorbar;
+    axis off; axis equal; drawnow; 
     subplot(3,2,3)
     surf(crk2(:,:,height,end)); title('RK2');az = 0; el = 90; view(az, el);
-    drawnow
     colorbar;
+    axis off; axis equal; drawnow; 
     %     subplot(3,2,4);
     %     surf(c2tl(:,:,height,end)); title('2TL'); az = 0; el = 90; view(az, el);
     %     drawnow
@@ -75,8 +75,8 @@ if PLOT_SOL
     subplot(3,2,5)
     diff_rk2 = crk2(:,:,:,end) - csol(:,:,:);
     surf(diff_rk2(:,:,height,end)); title('RK2 Error'); az = 0; el = 90; view(az, el);
-    drawnow
     colorbar;
+    axis off; axis equal; drawnow; 
     %     subplot(3,2,6)
     %     diff_c2l = crk2(:,:,:,end) - csol(:,:,:);
     %     surf(diff_c2l(:,:,height,end)); title('2TL Error'); az = 0; el = 90; view(az, el);

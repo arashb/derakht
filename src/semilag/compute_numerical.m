@@ -14,11 +14,11 @@ for tstep=1:tn
     fprintf('scheme: %s interp.: %s timestep: %d time:%f\n', NUM_SCHEME, INTERP_TYPE, tstep,tstep*dt);
     switch NUM_SCHEME
         case 'rk2'
-            cnumsol(:,:,:,tstep+1) = semilag_rk2(cnumsol,xx,yy,zz,@interp_conc,u,v,w,t,@interp_vel_precomputed,tstep,INTERP_TYPE);
-            % clear the precomputed velociy values for the previous time step
-            interp_vel_precomputed(xx,yy,zz,u,v,w,t,0,0,0,0,INTERP_TYPE,true);
+            cnumsol(:,:,:,tstep+1) = semilag_rk2(xx,yy,zz,@conc,@vel,t,tstep);
+            % clear the persistent precomputed velociy values for the previous time step
+            interp_vel_precomputed(0,0,0,0,0,0,0,0,0,0,0,0,0,true);
         case '2tl'
-            cnumsol(:,:,:,tstep+1) = semilag_2tl(cnumsol,xx,yy,zz,@interp_conc,u,v,w,tstep,dt,INTERP_TYPE);
+            cnumsol(:,:,:,tstep+1) = semilag_2tl(xx,yy,zz,@conc,u,v,w,tstep,dt,INTERP_TYPE);
         otherwise
             error('Numerical scheme is unknown.');
     end
@@ -29,5 +29,32 @@ for tstep=1:tn
         [u(:,:,:,tcnt), v(:,:,:,tcnt), w(:,:,:,tcnt)] = vel_rot(t(tcnt),xx,yy,zz,0.5,0.5,0.5);
     end
 end
+
+    %/* ************************************************** */
+    function ci = conc(tstep,xt,yt,zt)
+        ci = interp_conc_spatial(cnumsol,xx,yy,zz,tstep,xt,yt,zt,INTERP_TYPE,@conc_out);
+        
+        function cq = conc_out(cq,xq,yq,zq)     
+            % TODO: fix this. gaussian function at time t is needed.
+            % ce = gaussian( xt, yt, zt, 0.5, 0.5, 0.5, 0);
+            out = xq<0 | xq>1  | yq<0 | yq>1 | zq<0 | zq>1;
+            cq(out) = 0;%ce(out);
+        end
+    end
+
+    %/* ************************************************** */
+    function [uq,vq,wq] = vel(tq,xq,yq,zq)
+        [uq,vq,wq] = interp_vel_precomputed(xx,yy,zz,u,v,w,t,tq,xq,yq,zq,INTERP_TYPE,@vel_out);
+        
+        function [uq,vq,wq] = vel_out(uq,vq,wq,xq,yq,zq)
+            %[uq,vq,wq] = fout(uq,vq,wq,xq,yq,zq);
+            out = xq<0 | xq>1  | yq<0 | yq>1 | zq<0 | zq>1;
+            % TODO
+            [ue, ve, we] = vel_rot(0,xq,yq,zq,0.5,0.5,0.5);
+            uq(out) = -ue(out);
+            vq(out) = -ve(out);
+            wq(out) = -we(out);
+        end
+    end
 end
 

@@ -1,4 +1,4 @@
-function [uq, vq, wq] = interp_vel_spatial(xx,yy,zz,u,v,w,xq,yq,zq,INTERP_TYPE)
+function [uq, vq, wq] = interp_vel_spatial(xx,yy,zz,u,v,w,xq,yq,zq,INTERP_TYPE,fout)
 %INTERP_VEL_SPATIAL Spatial interpolation of velocity values.
 %
 % ur, vr, wr are the velocity values at the grid points
@@ -15,11 +15,5 @@ switch dim
         vq = interp2(xx,yy,v,xq,yq, INTERP_TYPE);
         wq = interp2(xx,yy,w,xq,yq, INTERP_TYPE);
 end
-
-out = xq<0 | xq>1  | yq<0 | yq>1 | zq<0 | zq>1;
-% TODO
-[ue, ve, we] = vel_rot(0,xq,yq,zq,0.5,0.5,0.5);
-uq(out) = -ue(out);
-vq(out) = -ve(out);
-wq(out) = -we(out);
+[uq,vq,wq] = fout(uq,vq,wq,xq,yq,zq);
 end

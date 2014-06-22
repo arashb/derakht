@@ -1,5 +1,5 @@
-function [uq,vq,wq] = interp_vel_precomputed(xx,yy,zz,u,v,w,t,tq,xq,yq,zq,INTERP_TYPE,clear_values)
-if nargin < 13, clear_values = false; end;
+function [uq,vq,wq] = interp_vel_precomputed(xx,yy,zz,u,v,w,t,tq,xq,yq,zq,INTERP_TYPE,fout,clear_values)
+if nargin < 14, clear_values = false; end;
 persistent ut vt wt;
 if clear_values, clear ut vt wt; return; end;
 
@@ -19,7 +19,7 @@ if (isempty(ut) || isempty(vt) || isempty(wt))
 end
 
 iind = time2index(tq);
-[uq, vq, wq]  = interp_vel_spatial(xx,yy,zz,ut(:,:,:,iind),vt(:,:,:,iind),wt(:,:,:,iind),xq,yq,zq,INTERP_TYPE);
+[uq, vq, wq]  = interp_vel_spatial(xx,yy,zz,ut(:,:,:,iind),vt(:,:,:,iind),wt(:,:,:,iind),xq,yq,zq,INTERP_TYPE,fout);
 
     %/* ************************************************** */
     function [taui] = time2index(tq)
