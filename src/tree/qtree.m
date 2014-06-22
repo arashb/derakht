@@ -265,6 +265,8 @@ function plottree(this,markersize)
   if nargin<2,markersize=2;end;
   plotnode=@(node,dummy)node.plotnode(markersize);
   this.preorder(plotnode,[],[]);
+  xlim([0 1]);
+  ylim([0 1])
   hold off;
 end
 end % methods

@@ -2,10 +2,6 @@ function [ cnumsol ] = compute_numerical(cinit, xx, yy, zz, u, v, w, ti, dt, tn,
 %COMPUTE_NUMERICAL 
 % 
 warning('off','all');
-% V2PREVTSTEP = 1;
-% VPREVTSTEP  = 2;
-% VCURTSTEP   = 3;
-% VNEXTSTEP   = 4;
 t = [ti-2*dt, ti-dt, ti, ti+dt];
 cnumsol = cinit;
 
