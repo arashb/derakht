@@ -34,11 +34,9 @@ end
     function ci = conc(tstep,xt,yt,zt)
         ci = interp_conc_spatial(cnumsol,xx,yy,zz,tstep,xt,yt,zt,INTERP_TYPE,@conc_out);
         
-        function cq = conc_out(cq,xq,yq,zq)     
-            % TODO: fix this. gaussian function at time t is needed.
-            % ce = gaussian( xt, yt, zt, 0.5, 0.5, 0.5, 0);
+        function cq = conc_out(cq,xq,yq,zq)
             out = xq<0 | xq>1  | yq<0 | yq>1 | zq<0 | zq>1;
-            cq(out) = 0;%ce(out);
+            cq(out) = 0;
         end
     end
 
@@ -47,13 +45,11 @@ end
         [uq,vq,wq] = interp_vel_precomputed(xx,yy,zz,u,v,w,t,tq,xq,yq,zq,INTERP_TYPE,@vel_out);
         
         function [uq,vq,wq] = vel_out(uq,vq,wq,xq,yq,zq)
-            %[uq,vq,wq] = fout(uq,vq,wq,xq,yq,zq);
             out = xq<0 | xq>1  | yq<0 | yq>1 | zq<0 | zq>1;
-            % TODO
-            [ue, ve, we] = vel_rot(0,xq,yq,zq,0.5,0.5,0.5);
-            uq(out) = -ue(out);
-            vq(out) = -ve(out);
-            wq(out) = -we(out);
+            [ue, ve, we] = vel_rot(tq,xq,yq,zq,0.5,0.5,0.5);
+            uq(out) = ue(out);
+            vq(out) = ve(out);
+            wq(out) = we(out);
         end
     end
 end

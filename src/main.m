@@ -22,26 +22,29 @@ resPerNode      = 15;           % Resolution per Node
 verbose         = false;
 gvfreq          = 1;
 dim             = 2;
-DEBUG           = true;
+DEBUG           = false;
 INTERP_TYPE     = 'cubic';
 
 % MAIN SCRIPT
 fconc       = @conc_tree;
-fvel_valx   = @velx;
-fvel_valy   = @vely;
+fvel_valx   = @velx_tree;
+fvel_valy   = @vely_tree;
 
-% CONCENTRATION TREE
+% CONSTRUCT THE TREES
+% CONCENTRATION
 c = qtree;
 c.insert_function(fconc,maxErrorPerNode,maxLevel,resPerNode);
-tree_data.init_data(c,fconc,resPerNode);
 
-% VELOCITY TREES
+% VELOCITY
 u = qtree;
 u.insert_function(fvel_valx,maxErrorPerNode,maxLevel,resPerNode);
-tree_data.init_data(u,fvel_valx,resPerNode);
 
 v = qtree;
 v.insert_function(fvel_valy,maxErrorPerNode,maxLevel,resPerNode);
+
+% INIT THE TREES VALUES
+tree_data.init_data(c,fconc,resPerNode);
+tree_data.init_data(u,fvel_valx,resPerNode);
 tree_data.init_data(v,fvel_valy,resPerNode);
 
 % ADVECT
@@ -49,8 +52,8 @@ ucells = {u,u,u,u};
 vcells = {v,v,v,v};
 c_atT = advect(c, ucells, vcells);
 
+% PLOT THE RESULTS
 figure('Name','SEMI-LAG QUAD-TREES');
-
 subplot(3,3,2)
 tree_data.plot_grid(c);
 title('c(t)');
@@ -99,7 +102,7 @@ umcells = clone(um_tree,num);
 vm_tree = merge(vcells);
 vmcells = clone(vm_tree,num);
 
-% INTERPOLATE VELOCITY VALUES ON THE MERGED TREE
+% INTERPOLATE VELOCITY VALUES ON THE MERGED TREES
 for i =1:num
     tree_data.interp(ucells{i}, umcells{i});
     tree_data.interp(vcells{i}, vmcells{i});
@@ -107,7 +110,6 @@ end
 
 um = tree_data.collapse(umcells);
 vm = tree_data.collapse(vmcells);
-
 
 if DEBUG
     n = length(ucells);
@@ -123,49 +125,76 @@ if DEBUG
     axis off; axis equal;
 end
 
-% ADVECT CONCENTRATION VALUES
+% PERFORM ONE STEP SEMI-LAGRANGIAN FOR EACH TREE LEAF
 cdepth = ctree.find_depth();
 cwidth = 1/2^cdepth;
 dx = cwidth/resPerNode;
 
-cfl = 1;
-om = 1;
-dt = cfl*dx/om;
-t = [-2*dt -dt 0 dt];
+cfl = 100;
+om  = 1;
+dt  = cfl*dx/om;
+t   = [-2*dt -dt 0 dt];
 tstep = 1;
-
-% TODO: THIS IS GOING TO WORK ONLY FOR THE VELOCITY FIELD USED IN THIS
-% EXAMPLE -> GENERALIZE THE METHOD
-uc = qtree.clone(ctree);
-tree_data.interp(um,uc);
-
-vc = qtree.clone(ctree);
-tree_data.interp(vm,vc);
 
 c_leaves     = ctree.leaves();
 cnext_leaves = ctree_next.leaves();
-uc_leaves    = uc.leaves();
-vc_leaves    = vc.leaves();
-
 for lvcnt = 1:length(c_leaves)
     c_leaf      = c_leaves{lvcnt};
     cnext_leaf  = cnext_leaves{lvcnt};
-    uc_leaf     = uc_leaves{lvcnt};
-    vc_leaf     = vc_leaves{lvcnt};
-        
+    
     [xx,yy,zz,dx,dy,dz] = c_leaf.mesh(resPerNode);
-    c = c_leaf.data.values;
-    u = uc_leaf.data.values;
-    v = vc_leaf.data.values;
-    w = zeros(size(u));
+    cnumsol = c_leaf.data.values;
+    
+    %fconc = @conc_exact;
+    %fvel  = @vel_exact;
+    fconc = @conc;    
+    fvel  = @vel;
+    cnext_values = semilag_rk2(xx,yy,zz,fconc,fvel,t,tstep);
     
     cnext_leaf.data.dim = c_leaf.data.dim;
-    cnext_leaf.data.resolution = c_leaf.data.resolution;
-    cnext_values = semilag_rk2(c,xx,yy,zz,@interp_conc, ...
-        u,v,w,t,@interp_vel_precomputed,tstep,INTERP_TYPE);
+    cnext_leaf.data.resolution = c_leaf.data.resolution;    
     cnext_leaf.data.values(:,:,:) = cnext_values;
 end
 
+    
+    %/* ************************************************** */
+    function ci = conc(tstep,xt,yt,zt)
+        ci = interp_conc_spatial(cnumsol,xx,yy,zz,tstep,xt,yt,zt,INTERP_TYPE,@conc_out);
+        
+        function cq = conc_out(cq,xq,yq,zq)                 
+            % OUTSIDE THE CURRENT NODE
+            [xmin,xmax,ymin,ymax] = c_leaf.corners();
+            out = xq<xmin | xq>xmax  | yq<ymin | yq>ymax;% | zq<0 | zq>1;
+            %ce = conc_exact(0,xq,yq,zq);
+            ce = tree_data.interp_points(ctree,xq,yq,zq);
+            cq(out) = ce(out);
+            
+            % OUTSIDE THE SIMULATION DOMAIN
+            out = xq<0 | xq>1  | yq<0 | yq>1 | zq<0 | zq>1;
+            cq(out) = 0;
+        end
+    end
+
+    %/* ************************************************** */
+    function [uq,vq,wq] = vel(tq,xq,yq,zq)
+        uval = tree_data.interp_points(um,xq,yq,zq);
+        vval = tree_data.interp_points(vm,xq,yq,zq);
+        % TODO: THIS WORKS ONLY FOR TIME-INDEPENDENT VELOCITY FIELDS
+        uq = uval(:,:,:,1);
+        vq = vval(:,:,:,1);
+        wq = zeros(size(uq));
+        [uq,vq,wq] = vel_out(uq,vq,wq,xq,yq,zq);
+        
+        function [uq,vq,wq] = vel_out(uq,vq,wq,xq,yq,zq)
+            % OUTSIDE THE SIMULATION DOMAIN
+            out = xq<0 | xq>1  | yq<0 | yq>1 | zq<0 | zq>1;
+            [ue, ve, we] = vel_rot(tq,xq,yq,zq,0.5,0.5,0.5);
+            uq(out) = ue(out);
+            vq(out) = ve(out);
+            wq(out) = we(out);
+        end
+    end
+    
     %/* ************************************************** */
     function [mt] = merge(treecells)
         mt = treecells{1};
@@ -184,14 +213,7 @@ end
 end
 
 %/* ************************************************** */
-function value = conc_tree(x,y)
-t=0; 
-z=0;
-value = conc(t,x,y,z);
-end
-
-%/* ************************************************** */
-function value = conc(t,x,y,z)
+function value = conc_exact(t,x,y,z)
 xc = 0.5;
 yc = 0.5;
 theta = 0;
@@ -201,54 +223,59 @@ value = gaussian(x,y,xc,yc,theta, sigmax, sigmay);
 end
 
 %/* ************************************************** */
-function [u,v,w] = vel(t,x,y,z)
-z = 0;
-xc = 0.5*ones(size(x));
-yc = xc; zc = xc;
-[u,v,w] = vel_rot(t,x,y,z,xc,yc,zc);
+function [u,v,w] = vel_exact(t,x,y,z)
+    xc = 0.5;
+    yc = 0.5;
+    zc = 0.5;
+    [u,v,w] = vel_rot(t,x,y,z,xc,yc,zc);
 end
 
 %/* ************************************************** */
-function value = velx(x,y)
-    [u,v,w] = vel_values(x,y);
-    value = u(:,:,:,2);
+function value = conc_tree(x,y)
+t=0; 
+z=0;
+value = conc_exact(t,x,y,z);
 end
 
 %/* ************************************************** */
-function value = vely(x,y)
-    [u,v,w] = vel_values(x,y);
-    value = v(:,:,:,2);
+function u = velx_tree(x,y)
+    [u,v,w] = vel_exact(0,x,y,0);
 end
 
 %/* ************************************************** */
-function [u,v,w] = vel_values(x,y)
-z = 0;
-xc = 0.5*ones(size(x));
-yc = xc; zc = xc;
-dt = 0.01;
-ti = 0;
-tlist = linspace(ti-dt,ti+2*dt,4);
-u = zeros([size(x) 1 length(tlist)]);
-v = u; w = u;
-for tcnt = 1:length(tlist)
-    t = tlist(tcnt);
-    [u(:,:,:,tcnt),v(:,:,:,tcnt),w(:,:,:,tcnt)] = vel_rot(t,x,y,z,xc,yc,zc);
-end
+function v = vely_tree(x,y)
+    [u,v,w] = vel_exact(0,x,y,0);
 end
 
 %/* ************************************************** */
-function value = velnorm(x,y)
-t = 0;
-z = 0;
-value = zeros(size(x));
-xc = 0.5*ones(size(x));
-yc = xc; zc = xc;
-[u,v,w] = vel_rot(t,x,y,z,xc,yc,zc);
-for i =1:size(x,1)
-    for j=1:size(y,2)
-        value(i,j) = norm([u(i,j), v(i,j)]);
-    end
-end
+% function [u,v,w] = vel_values(x,y)
+% z = 0;
+% xc = 0.5*ones(size(x));
+% yc = xc; zc = xc;
+% dt = 0.01;
+% ti = 0;
+% tlist = linspace(ti-dt,ti+2*dt,4);
+% u = zeros([size(x) 1 length(tlist)]);
+% v = u; w = u;
+% for tcnt = 1:length(tlist)
+%     t = tlist(tcnt);
+%     [u(:,:,:,tcnt),v(:,:,:,tcnt),w(:,:,:,tcnt)] = vel_rot(t,x,y,z,xc,yc,zc);
+% end
+% end
+
+%/* ************************************************** */
+% function value = velnorm(x,y)
+% t = 0;
+% z = 0;
+% value = zeros(size(x));
+% xc = 0.5*ones(size(x));
+% yc = xc; zc = xc;
+% [u,v,w] = vel_rot(t,x,y,z,xc,yc,zc);
+% for i =1:size(x,1)
+%     for j=1:size(y,2)
+%         value(i,j) = norm([u(i,j), v(i,j)]);
+%     end
+% end
 end
 
 
