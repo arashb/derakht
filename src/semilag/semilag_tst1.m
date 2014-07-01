@@ -1,4 +1,4 @@
-function [] = tst1()
+function [] = semilag_tst1()
 clear; close all;
 clear global;
 addpath('../common/');

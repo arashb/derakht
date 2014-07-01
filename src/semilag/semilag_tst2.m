@@ -1,4 +1,4 @@
-function tst2()
+function semilag_tst2()
 %TST2 test of 2D semi-lagrangian
 clear; close all;
 addpath('../common/');

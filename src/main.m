@@ -27,8 +27,8 @@ INTERP_TYPE     = 'cubic';
 
 % MAIN SCRIPT
 fconc       = @conc_exact;
-fvel_valx   = @velx_tree;
-fvel_valy   = @vely_tree;
+fvel_valx   = @velx_exact;
+fvel_valy   = @vely_exact;
 
 % CONSTRUCT THE TREES
 % CONCENTRATION
@@ -232,12 +232,12 @@ function [u,v,w] = vel_exact(t,x,y,z)
 end
 
 %/* ************************************************** */
-function u = velx_tree(t,x,y,z)
+function u = velx_exact(t,x,y,z)
     [u,v,w] = vel_exact(t,x,y,z);
 end
 
 %/* ************************************************** */
-function v = vely_tree(t,x,y,z)
+function v = vely_exact(t,x,y,z)
     [u,v,w] = vel_exact(t,x,y,z);
 end
 
