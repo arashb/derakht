@@ -137,7 +137,7 @@ classdef tree_data < handle
                     vv = interp2(src_xxr,src_yyr,interp_data,xx,yy);
                     tmpval(indices) = vv;
                 end
-                val = tmpval;
+                val(:,:,:,dimcnt) = tmpval;
             end
         end
         
