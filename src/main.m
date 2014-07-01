@@ -26,7 +26,7 @@ DEBUG           = false;
 INTERP_TYPE     = 'cubic';
 
 % MAIN SCRIPT
-fconc       = @conc_tree;
+fconc       = @conc_exact;
 fvel_valx   = @velx_tree;
 fvel_valy   = @vely_tree;
 
@@ -232,51 +232,14 @@ function [u,v,w] = vel_exact(t,x,y,z)
 end
 
 %/* ************************************************** */
-function value = conc_tree(x,y)
-t=0; 
-z=0;
-value = conc_exact(t,x,y,z);
+function u = velx_tree(t,x,y,z)
+    [u,v,w] = vel_exact(t,x,y,z);
 end
 
 %/* ************************************************** */
-function u = velx_tree(x,y)
-    [u,v,w] = vel_exact(0,x,y,0);
+function v = vely_tree(t,x,y,z)
+    [u,v,w] = vel_exact(t,x,y,z);
 end
 
-%/* ************************************************** */
-function v = vely_tree(x,y)
-    [u,v,w] = vel_exact(0,x,y,0);
-end
-
-%/* ************************************************** */
-% function [u,v,w] = vel_values(x,y)
-% z = 0;
-% xc = 0.5*ones(size(x));
-% yc = xc; zc = xc;
-% dt = 0.01;
-% ti = 0;
-% tlist = linspace(ti-dt,ti+2*dt,4);
-% u = zeros([size(x) 1 length(tlist)]);
-% v = u; w = u;
-% for tcnt = 1:length(tlist)
-%     t = tlist(tcnt);
-%     [u(:,:,:,tcnt),v(:,:,:,tcnt),w(:,:,:,tcnt)] = vel_rot(t,x,y,z,xc,yc,zc);
-% end
-% end
-
-%/* ************************************************** */
-% function value = velnorm(x,y)
-% t = 0;
-% z = 0;
-% value = zeros(size(x));
-% xc = 0.5*ones(size(x));
-% yc = xc; zc = xc;
-% [u,v,w] = vel_rot(t,x,y,z,xc,yc,zc);
-% for i =1:size(x,1)
-%     for j=1:size(y,2)
-%         value(i,j) = norm([u(i,j), v(i,j)]);
-%     end
-% end
-%end
 
 

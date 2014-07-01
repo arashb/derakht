@@ -46,6 +46,7 @@ fprintf('tree depth is %d\n', depth);
 % PLOTTING
 
 subplot(3,2,1)
+a.plottree
 tree_data.plot_grid(a)
 title('a grid')
 
@@ -54,28 +55,32 @@ tree_data.plot_grid(b)
 title('b grid')
 
 subplot(3,2,3)
+a.plottree
 tree_data.plot_data(a,1)
 title('a values')
 
 subplot(3,2,4)
+b.plottree
 tree_data.plot_data(b,1)
 title('b values')
 
 subplot(3,2,5)
+c.plottree
 tree_data.plot_data(c,1)
 title('c values(:,1)')
 
 subplot(3,2,6)
+c.plottree
 tree_data.plot_data(c,2)
 title('c values(:,2)')
 
-    function value = func1(x,y)
+    function value = func1(t,x,y,z)
         xc = 0.75;
         yc = 0.75;
         value = gaussian(x,y,xc,yc);
     end
 
-    function value = func2(x,y)
+    function value = func2(t,x,y,z)
         xc = 0.25;
         yc = 0.25;
         value = gaussian(x,y,xc,yc);

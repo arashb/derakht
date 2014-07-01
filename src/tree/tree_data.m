@@ -39,13 +39,14 @@ classdef tree_data < handle
         end
         
         %/* ************************************************** */
-        function init_data(tree, func, resPerNode)
+        function init_data(tree, func, resPerNode, t)
+            if nargin < 4, t = 0; end;
             
             cleaves = tree.leaves();
             for lvcnt = 1:length(cleaves)
                 cleaf = cleaves{lvcnt};
                 [xr,yr,zr,dx,dy,dz] = cleaf.mesh(resPerNode);
-                cvalues = func(xr,yr);
+                cvalues = func(t,xr,yr,zr);
                 cleaf.data.dim          = size(cvalues,4);
                 cleaf.data.resolution   = resPerNode;
                 for dcnt = 1:size(cvalues,4)
