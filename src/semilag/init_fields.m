@@ -1,13 +1,8 @@
-function [ u, v, w, c ] = init_fields(xi, xf, dx, xx, yy, zz, ti, dt, VF_TYPE, CF_TYPE)
+function [ u, v, w, c ] = init_fields(xi, xf, dx, xx, yy, zz, t, VF_TYPE, CF_TYPE)
 xc = (xf + xi) / 2;
 yc = xc;
 zc = xc;
 c = zeros(size(xx));
-t = [ti-2*dt, ti-dt, ti, ti+dt];
-V2PREVTSTEP = 1;
-VPREVTSTEP  = 2;        % index for the vel. values of the previous time step
-VCURTSTEP   = 3;        % index for the vel. values of the current time step
-VNEXTSTEP   = 4;        % index for the vel. values of the next time step
 
 % init the velocity values
 init_vel();

@@ -1,9 +1,14 @@
 function [ cnew ] = semilag_2tl(xx,yy,zz,fconc,u,v,w,tstep,dt,INTERP_TYPE)
 
-V2PREVTSTEP = 1;
-VPREVTSTEP  = 2;
-VCURTSTEP   = 3;
-VNEXTSTEP   = 4;
+% V2PREVTSTEP = 1;
+% VPREVTSTEP  = 2;
+% VCURTSTEP   = 3;
+% VNEXTSTEP   = 4;
+
+VPREVTSTEP  = 1;
+VCURTSTEP   = 2;
+VNEXTSTEP   = 3;
+V2NEXTSTEP  = 4;
 
 % compute the velocity in midpoint (x - alpha/ 2, t + dt/2)
 umidpoint = 1.5*u(:,:,:,VCURTSTEP) - 0.5*u(:,:,:,VPREVTSTEP);

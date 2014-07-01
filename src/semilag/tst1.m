@@ -9,9 +9,9 @@ ERR_TYPE = 1;                   % type of error computation (L_2, L_inifinite, .
 RES_PATH = './';                % path to save results
 fig_format = '.pdf';
 %INTERP_LIST = {'linear','cubic','spline'};
-% INTERP_LIST = {'linear'};
-INTERP_LIST = {'cubic'};
-% INTERP_LIST = {'spline'};
+%INTERP_LIST = {'linear'};
+% INTERP_LIST = {'cubic'};
+INTERP_LIST = {'spline'};
 VFREQ_LIST = [5];
 global gvfreq;
 global dim;
@@ -45,10 +45,11 @@ for ncnt =1:length(n_list)
     [xx, yy, zz] = meshgrid(x, x, x);
     height = round(2*(n+1)/3);      % used for slicing the cylinder
     
-    [ u, v, w, cinit ] = init_fields(xi, xf, dx, xx, yy, zz, ti, dt, VF_TYPE, CF_TYPE);    
+    t = [ti-dt, ti, ti+dt, ti+2*dt];
+    [ u, v, w, cinit ] = init_fields(xi, xf, dx, xx, yy, zz, t, VF_TYPE, CF_TYPE);    
     csol = compute_analytical(xi, xf, ti, tf, xx, yy, zz, CF_TYPE);
     
-    crk2 = compute_numerical(cinit, xx, yy, zz, u, v, w, ti, dt, tn, INTERP_TYPE, 'rk2');
+    crk2 = compute_numerical(cinit, xx, yy, zz, u, v, w, t, dt, tn, INTERP_TYPE, 'rk2');
     error_rk2(interptypecnt,ncnt,fcnt) = compute_error(crk2(3:end-2,3:end-2,3:end-2,end), csol(3:end-2,3:end-2,3:end-2), ERR_TYPE);
     fprintf('rk2 error =  %e\n',error_rk2(interptypecnt,ncnt,fcnt));
 

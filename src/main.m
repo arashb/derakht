@@ -72,11 +72,13 @@ title('v(t)');
 
 f = figure('Name','SEMI-LAG ADVECTION');
 subplot(1,2,1);
+c.plottree(0.5);
 tree_data.plot_data(c)
 colorbar;
 title('c(t)');
 
 subplot(1,2,2);
+c_atT.plottree(0.5);
 tree_data.plot_data(c_atT);
 colorbar;
 title('c(t+dt)');
@@ -128,12 +130,12 @@ end
 % PERFORM ONE STEP SEMI-LAGRANGIAN FOR EACH TREE LEAF
 cdepth = ctree.find_depth();
 cwidth = 1/2^cdepth;
-dx = cwidth/resPerNode;
+dx     = cwidth/resPerNode;
 
 cfl = 100;
 om  = 1;
 dt  = cfl*dx/om;
-t   = [-2*dt -dt 0 dt];
+t   = [-dt 0 dt 2*dt];
 tstep = 1;
 
 c_leaves     = ctree.leaves();
@@ -151,11 +153,10 @@ for lvcnt = 1:length(c_leaves)
     fvel  = @vel;
     cnext_values = semilag_rk2(xx,yy,zz,fconc,fvel,t,tstep);
     
-    cnext_leaf.data.dim = c_leaf.data.dim;
-    cnext_leaf.data.resolution = c_leaf.data.resolution;    
+    cnext_leaf.data.dim           = c_leaf.data.dim;
+    cnext_leaf.data.resolution    = c_leaf.data.resolution;    
     cnext_leaf.data.values(:,:,:) = cnext_values;
 end
-
     
     %/* ************************************************** */
     function ci = conc(tstep,xt,yt,zt)

@@ -1,10 +1,8 @@
-function [ cnumsol ] = compute_numerical(cinit, xx, yy, zz, u, v, w, ti, dt, tn, INTERP_TYPE, NUM_SCHEME)
+function [ cnumsol ] = compute_numerical(cinit, xx, yy, zz, u, v, w, t, dt, tn, INTERP_TYPE, NUM_SCHEME)
 %COMPUTE_NUMERICAL 
-% 
 warning('off','all');
-t = [ti-2*dt, ti-dt, ti, ti+dt];
-cnumsol = cinit;
 
+cnumsol = cinit;
 fprintf('computing numerical solution:\n');
 for tstep=1:tn
     fprintf('scheme: %s interp.: %s timestep: %d time:%f\n', NUM_SCHEME, INTERP_TYPE, tstep,tstep*dt);
