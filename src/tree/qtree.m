@@ -100,25 +100,26 @@ this.isleaf = false;
 end
 
 %/* ************************************************** */
-function insert_function(this, func, maxErrPerNode, maxLevel, resPerNode)
+function insert_function(this, func, maxErrPerNode, maxLevel, resPerNode,t)
 % This is the main construction routine for qtree.
 if nargin < 5, resPerNode = 15; end;
+if nargin < 6, t = 0; end;
 
 if this.isleaf
-    if ~do_refine(this, func, maxErrPerNode, maxLevel, resPerNode), return; end
+    if ~do_refine(this, func, maxErrPerNode, maxLevel, resPerNode,t), return; end
     % this node will be split;
     create_kids(this);
 end
 
 % now we insert the function to the kids
 for k=1:4
-    this.kids{k}.insert_function( func, maxErrPerNode, maxLevel, resPerNode);
+    this.kids{k}.insert_function(func, maxErrPerNode, maxLevel, resPerNode, t);
 end
 
     %/* ************************************************** */
-    function [val] = do_refine(this, func, maxErrPerNode, maxLevel, resPerNode)
+    function [val] = do_refine(this, func, maxErrPerNode, maxLevel, resPerNode, t)
         if this.level == maxLevel, val = false; return; end;
-        err = compute_error(this, func, resPerNode);
+        err = compute_error(this, func, resPerNode,t);
         if err <=  maxErrPerNode, val = false; return; end;
         val = true;
     end
@@ -344,8 +345,6 @@ end % methods static
 methods (Access = private)
     %/* ************************************************** */
     function err= compute_error(this, func, resPerNode,t)
-        if nargin < 4, t = 0; end;
-        
         [xxr,yyr,zzr,dx,dy,dz] = this.mesh(resPerNode);
         % compute the function values on the local grid points
         fre = func(t,xxr,yyr,zzr);   
