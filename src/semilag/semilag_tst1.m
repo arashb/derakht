@@ -9,9 +9,9 @@ ERR_TYPE = 1;                   % type of error computation (L_2, L_inifinite, .
 RES_PATH = './';                % path to save results
 fig_format = '.pdf';
 %INTERP_LIST = {'linear','cubic','spline'};
-%INTERP_LIST = {'linear'};
+INTERP_LIST = {'linear'};
 % INTERP_LIST = {'cubic'};
-INTERP_LIST = {'spline'};
+%INTERP_LIST = {'spline'};
 VFREQ_LIST = [5];
 global gvfreq;
 global dim;
@@ -23,7 +23,7 @@ verbose = false;
 xi      = 0;
 xf      = 1;
 ti      = 0;
-n_level = [5];
+n_level = [4 5 6];
 n_list  = 2.^n_level;
 tn      = 1;
 cfl     = 1;

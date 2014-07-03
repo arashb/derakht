@@ -26,7 +26,7 @@ DEBUG           = false;
 INTERP_TYPE     = 'cubic';
 
 % MAIN SCRIPT
-fconc       = @conc_exact;
+fconc   = @conc_exact;
 fvelx   = @velx_exact;
 fvely   = @vely_exact;
 
@@ -231,16 +231,7 @@ end
     function [uq,vq,wq] = vel(tq,xq,yq,zq)
         uval = tree_data.interp_points(um,xq,yq,zq);
         vval = tree_data.interp_points(vm,xq,yq,zq);
-        wval = zeros(size(uval));
-        % <-- USE FOR TIME-VARIYING VELOCITY FIELDS
-        % [uq, vq, wq] = interp_vel_temporal(uval,vval,wval,t,tq,INTERP_TYPE);
-        % USE FOR TIME-VARIYING VELOCITY FIELDS -->
-        
-        % <-- USE FOR TIME-INDEPENDENT VELOCITY FIELDS
-        uq = uval(:,:,:,2);
-        vq = vval(:,:,:,2);
-        wq = wval(:,:,:,2);
-        % USE FOR TIME-INDEPENDENT VELOCITY FIELDS -->
+        [uq,vq,wq,] = interp_vel_temporal(uval,vval,0,t,tq,INTERP_TYPE);
         [uq,vq,wq] = vel_out(uq,vq,wq,xq,yq,zq);
         
         function [uq,vq,wq] = vel_out(uq,vq,wq,xq,yq,zq)
