@@ -109,7 +109,6 @@ classdef tree_data < handle
         
         %/* ************************************************** */
         function val = interp_points(src_tree,xq,yq,zq)
-            global verbose;
             src_leaves  = src_tree.leaves();
             resPerNode  = src_leaves{1}.data.resolution;
             data_dim    = src_leaves{1}.data.dim;
@@ -127,9 +126,6 @@ classdef tree_data < handle
                     
                     xx = xq(indices);
                     yy = yq(indices);
-                    if verbose
-                        fprintf('interpolate values of dst node %d from src node %d\n',dst_lvcnt, src_lvcnt);
-                    end
                     
                     [src_xxr,src_yyr,src_zzr,src_dx,src_dy,src_dz] = src_leaf.mesh(resPerNode);
                     

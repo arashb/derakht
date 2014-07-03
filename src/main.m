@@ -27,48 +27,106 @@ INTERP_TYPE     = 'cubic';
 
 % MAIN SCRIPT
 fconc       = @conc_exact;
-fvel_valx   = @velx_exact;
-fvel_valy   = @vely_exact;
+fvelx   = @velx_exact;
+fvely   = @vely_exact;
 
-% CONSTRUCT THE TREES
+% CONSTRUCT AND INIT THE TREES VALUES
 % CONCENTRATION
 c = qtree;
 c.insert_function(fconc,maxErrorPerNode,maxLevel,resPerNode);
-
-% VELOCITY
-u = qtree;
-u.insert_function(fvel_valx,maxErrorPerNode,maxLevel,resPerNode);
-
-v = qtree;
-v.insert_function(fvel_valy,maxErrorPerNode,maxLevel,resPerNode);
-
-% INIT THE TREES VALUES
 tree_data.init_data(c,fconc,resPerNode);
-tree_data.init_data(u,fvel_valx,resPerNode);
-tree_data.init_data(v,fvel_valy,resPerNode);
+
+cdepth = c.find_depth();
+cwidth = 1/2^cdepth;
+dx     = cwidth/resPerNode;
+cfl = 100;
+om  = 1;
+dt  = cfl*dx/om;
+t   = [-dt 0 dt 2*dt];
+
+% VELOCITY (TIME-DEPENDENT)
+nt = length(t);
+ucells = cell(1,nt);
+vcells = cell(1,nt);
+
+for tcnt = 1:nt
+    utmptree = qtree;
+    utmptree.insert_function(fvelx,maxErrorPerNode,maxLevel,resPerNode,t(tcnt));
+    tree_data.init_data(utmptree,fvelx,resPerNode,t(tcnt));
+    ucells{tcnt} = utmptree;
+    
+    vtmptree = qtree;
+    vtmptree.insert_function(fvely,maxErrorPerNode,maxLevel,resPerNode,t(tcnt));
+    tree_data.init_data(vtmptree,fvely,resPerNode,t(tcnt));
+    vcells{tcnt} = vtmptree;
+end
+
+% VELOCITY (TIME-INDEPENDENT)
+% u = qtree;
+% u.insert_function(fvel_valx,maxErrorPerNode,maxLevel,resPerNode);
+% 
+% v = qtree;
+% v.insert_function(fvel_valy,maxErrorPerNode,maxLevel,resPerNode);
+% tree_data.init_data(u,fvel_valx,resPerNode);
+% tree_data.init_data(v,fvel_valy,resPerNode);
+% ucells = {u,u,u,u};
+% vcells = {v,v,v,v};
 
 % ADVECT
-ucells = {u,u,u,u};
-vcells = {v,v,v,v};
-c_atT = advect(c, ucells, vcells);
+c_atT = advect(c, ucells, vcells, t);
 
 % PLOT THE RESULTS
 figure('Name','SEMI-LAG QUAD-TREES');
-subplot(3,3,2)
-tree_data.plot_grid(c);
+
+subplot(3,4,2)
+c.plottree;
+tree_data.plot_data(c);
 title('c(t)');
 
-subplot(3,3,3)
-tree_data.plot_grid(c_atT);
+subplot(3,4,3)
+c_atT.plottree;
+tree_data.plot_data(c_atT);
 title('c(t+dt)');
 
-subplot(3,3,5)
-tree_data.plot_grid(u);
-title('u(t)');
+subplot(3,4,5)
+ucells{1}.plottree;
+tree_data.plot_data(ucells{1});
+title('u(t(n-1))');
 
-subplot(3,3,8)
-tree_data.plot_grid(v);
-title('v(t)');
+subplot(3,4,6)
+ucells{2}.plottree;
+tree_data.plot_data(ucells{2});
+title('u(t(n))');
+
+subplot(3,4,7)
+ucells{3}.plottree;
+tree_data.plot_data(ucells{3});
+title('u(t(n+1))');
+
+subplot(3,4,8)
+ucells{4}.plottree;
+tree_data.plot_data(ucells{4});
+title('u(t(n+2))');
+
+subplot(3,4,9)
+vcells{1}.plottree;
+tree_data.plot_data(vcells{1});
+title('v(t(n-1))');
+
+subplot(3,4,10)
+vcells{2}.plottree;
+tree_data.plot_data(vcells{2});
+title('v(t(n))');
+
+subplot(3,4,11)
+vcells{3}.plottree;
+tree_data.plot_data(vcells{3});
+title('v(t(n+1))');
+
+subplot(3,4,12)
+vcells{4}.plottree;
+tree_data.plot_data(vcells{4});
+title('v(t(n+2))');
 
 f = figure('Name','SEMI-LAG ADVECTION');
 subplot(1,2,1);
@@ -83,11 +141,11 @@ tree_data.plot_data(c_atT);
 colorbar;
 title('c(t+dt)');
 
-saveas(f, 'resutls','eps');
+saveas(f, 'results','pdf');
 end
 
 %/* ************************************************** */
-function [ctree_next] = advect(ctree, ucells, vcells)
+function [ctree_next] = advect(ctree, ucells, vcells, t)
 global DEBUG;
 global resPerNode;
 global INTERP_TYPE;
@@ -118,8 +176,10 @@ if DEBUG
     figure('Name','MERGED VEL. TREES');
     for i=1:n
         subplot(3,n,i)
+        ucells{i}.plottree;
         tree_data.plot_data(ucells{i});
         subplot(3,n,n+i)
+        umcells{i}.plottree;
         tree_data.plot_data(umcells{i});
     end
     subplot(3,n,2*n+1);
@@ -128,16 +188,7 @@ if DEBUG
 end
 
 % PERFORM ONE STEP SEMI-LAGRANGIAN FOR EACH TREE LEAF
-cdepth = ctree.find_depth();
-cwidth = 1/2^cdepth;
-dx     = cwidth/resPerNode;
-
-cfl = 100;
-om  = 1;
-dt  = cfl*dx/om;
-t   = [-dt 0 dt 2*dt];
 tstep = 1;
-
 c_leaves     = ctree.leaves();
 cnext_leaves = ctree_next.leaves();
 for lvcnt = 1:length(c_leaves)
@@ -149,12 +200,12 @@ for lvcnt = 1:length(c_leaves)
     
     %fconc = @conc_exact;
     %fvel  = @vel_exact;
-    fconc = @conc;    
+    fconc = @conc;
     fvel  = @vel;
     cnext_values = semilag_rk2(xx,yy,zz,fconc,fvel,t,tstep);
     
     cnext_leaf.data.dim           = c_leaf.data.dim;
-    cnext_leaf.data.resolution    = c_leaf.data.resolution;    
+    cnext_leaf.data.resolution    = c_leaf.data.resolution;
     cnext_leaf.data.values(:,:,:) = cnext_values;
 end
     
@@ -180,10 +231,16 @@ end
     function [uq,vq,wq] = vel(tq,xq,yq,zq)
         uval = tree_data.interp_points(um,xq,yq,zq);
         vval = tree_data.interp_points(vm,xq,yq,zq);
-        % TODO: THIS WORKS ONLY FOR TIME-INDEPENDENT VELOCITY FIELDS
-        uq = uval(:,:,:,1);
-        vq = vval(:,:,:,1);
-        wq = zeros(size(uq));
+        wval = zeros(size(uval));
+        % <-- USE FOR TIME-VARIYING VELOCITY FIELDS
+        % [uq, vq, wq] = interp_vel_temporal(uval,vval,wval,t,tq,INTERP_TYPE);
+        % USE FOR TIME-VARIYING VELOCITY FIELDS -->
+        
+        % <-- USE FOR TIME-INDEPENDENT VELOCITY FIELDS
+        uq = uval(:,:,:,2);
+        vq = vval(:,:,:,2);
+        wq = wval(:,:,:,2);
+        % USE FOR TIME-INDEPENDENT VELOCITY FIELDS -->
         [uq,vq,wq] = vel_out(uq,vq,wq,xq,yq,zq);
         
         function [uq,vq,wq] = vel_out(uq,vq,wq,xq,yq,zq)
@@ -215,11 +272,11 @@ end
 
 %/* ************************************************** */
 function value = conc_exact(t,x,y,z)
-xc = 0.5;
-yc = 0.5;
+xc = 0.75;
+yc = 0.75;
 theta = 0;
 sigmax = 0.05;
-sigmay = 0.09;
+sigmay = 0.05;
 value = gaussian(x,y,xc,yc,theta, sigmax, sigmay);
 end
 
