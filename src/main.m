@@ -33,7 +33,7 @@ fvely   = @vely_exact;
 % CONSTRUCT AND INIT THE TREES VALUES
 % CONCENTRATION
 c = qtree;
-c.insert_function(fconc,maxErrorPerNode,maxLevel,resPerNode);
+c.insert_function(fconc,@do_refine);
 tree_data.init_data(c,fconc,resPerNode);
 
 cdepth = c.find_depth();
@@ -51,12 +51,12 @@ vcells = cell(1,nt);
 
 for tcnt = 1:nt
     utmptree = qtree;
-    utmptree.insert_function(fvelx,maxErrorPerNode,maxLevel,resPerNode,t(tcnt));
+    utmptree.insert_function(fvelx,@do_refine,t(tcnt));
     tree_data.init_data(utmptree,fvelx,resPerNode,t(tcnt));
     ucells{tcnt} = utmptree;
     
     vtmptree = qtree;
-    vtmptree.insert_function(fvely,maxErrorPerNode,maxLevel,resPerNode,t(tcnt));
+    vtmptree.insert_function(fvely,@do_refine,t(tcnt));
     tree_data.init_data(vtmptree,fvely,resPerNode,t(tcnt));
     vcells{tcnt} = vtmptree;
 end
@@ -73,7 +73,12 @@ end
 % vcells = {v,v,v,v};
 
 % ADVECT
-c_atT = advect(c, ucells, vcells, t);
+% INIT THE TREE FOR THE NEXT TIME STEP
+% same structure as ctree
+% TODO: It will be changed later
+ctree_next = qtree.clone(c);
+
+cnext = advect(c, ctree_next, ucells, vcells, t);
 
 % PLOT THE RESULTS
 figure('Name','SEMI-LAG QUAD-TREES');
@@ -84,8 +89,8 @@ tree_data.plot_data(c);
 title('c(t)');
 
 subplot(3,4,3)
-c_atT.plottree;
-tree_data.plot_data(c_atT);
+cnext.plottree;
+tree_data.plot_data(cnext);
 title('c(t+dt)');
 
 subplot(3,4,5)
@@ -136,24 +141,24 @@ colorbar;
 title('c(t)');
 
 subplot(1,2,2);
-c_atT.plottree(0.5);
-tree_data.plot_data(c_atT);
+cnext.plottree(0.5);
+tree_data.plot_data(cnext);
 colorbar;
 title('c(t+dt)');
 
 saveas(f, 'results','pdf');
+    
+    %/* ************************************************** */
+    function val = do_refine(qtree,func,t)
+        val = tree_do_refine(qtree, func, maxErrorPerNode, maxLevel, resPerNode,t);
+    end
 end
 
 %/* ************************************************** */
-function [ctree_next] = advect(ctree, ucells, vcells, t)
+function [ctree_next] = advect(c, ctree_next, ucells, vcells, t)
 global DEBUG;
 global resPerNode;
 global INTERP_TYPE;
-
-% INIT THE C_atT
-% same structure as ctree
-% TODO: It will be changed later
-ctree_next = qtree.clone(ctree);
 
 % MERGE VELOCITY TREES
 num     = size(ucells,2);
@@ -189,7 +194,7 @@ end
 
 % PERFORM ONE STEP SEMI-LAGRANGIAN FOR EACH TREE LEAF
 tstep = 1;
-c_leaves     = ctree.leaves();
+c_leaves     = c.leaves();
 cnext_leaves = ctree_next.leaves();
 for lvcnt = 1:length(c_leaves)
     c_leaf      = c_leaves{lvcnt};
@@ -218,7 +223,7 @@ end
             [xmin,xmax,ymin,ymax] = c_leaf.corners();
             out = xq<xmin | xq>xmax  | yq<ymin | yq>ymax;% | zq<0 | zq>1;
             %ce = conc_exact(0,xq,yq,zq);
-            ce = tree_data.interp_points(ctree,xq,yq,zq);
+            ce = tree_data.interp_points(c,xq,yq,zq);
             cq(out) = ce(out);
             
             % OUTSIDE THE SIMULATION DOMAIN

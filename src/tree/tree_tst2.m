@@ -18,9 +18,9 @@ Z2 = func2(0,xx,yy,0);
 Z3 = func3(0,xx,yy,0);
 
 a = qtree;
-a.insert_function(@func1,maxErrorPerNode,maxLevel,resPerNode);
-a.insert_function(@func2,maxErrorPerNode,maxLevel,resPerNode);
-a.insert_function(@func3,maxErrorPerNode,maxLevel,resPerNode);
+a.insert_function(@func1,@do_refine);
+a.insert_function(@func2,@do_refine);
+a.insert_function(@func3,@do_refine);
 
 subplot(1,2,1);
 contour(xx,yy,Z1);
@@ -77,5 +77,9 @@ axis off;
 
     function value = func3(t,x,y,z)        
         value = gaussian(x,y);
+    end
+
+    function val = do_refine(qtree,func,t)
+        val = tree_do_refine(qtree, func, maxErrorPerNode, maxLevel, resPerNode,t);
     end
 end

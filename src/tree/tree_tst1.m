@@ -33,9 +33,9 @@ hold on;
 
 % create and plot the tree
 o = qtree;
-o.insert_function(f1,maxErrorPerNode,maxLevel,resPerNode);
-o.insert_function(f2,maxErrorPerNode,maxLevel,resPerNode);
-o.insert_function(f3,maxErrorPerNode,maxLevel,resPerNode);
+o.insert_function(f1,@do_refine);
+o.insert_function(f2,@do_refine);
+o.insert_function(f3,@do_refine);
 o.plottree;
 axis off; hold on;
 
@@ -66,6 +66,10 @@ fprintf('tree depth is %d\n', depth);
         xc = 0.5;
         yc = 0.5;
         value = gaussian(x,y,xc,yc);
+    end
+
+    function val = do_refine(qtree,func,t)
+        val = tree_do_refine(qtree, func, maxErrorPerNode, maxLevel, resPerNode,t);
     end
 end
 

@@ -100,30 +100,20 @@ this.isleaf = false;
 end
 
 %/* ************************************************** */
-function insert_function(this, func, maxErrPerNode, maxLevel, resPerNode,t)
+function insert_function(this, func, fdo_refine, t)
 % This is the main construction routine for qtree.
-if nargin < 5, resPerNode = 15; end;
-if nargin < 6, t = 0; end;
+if nargin < 4, t = 0; end;
 
 if this.isleaf
-    if ~do_refine(this, func, maxErrPerNode, maxLevel, resPerNode,t), return; end
+    if ~fdo_refine(this, func, t), return; end
     % this node will be split;
     create_kids(this);
 end
 
 % now we insert the function to the kids
 for k=1:4
-    this.kids{k}.insert_function(func, maxErrPerNode, maxLevel, resPerNode, t);
-end
-
-    %/* ************************************************** */
-    function [val] = do_refine(this, func, maxErrPerNode, maxLevel, resPerNode, t)
-        if this.level == maxLevel, val = false; return; end;
-        err = compute_error(this, func, resPerNode,t);
-        if err <=  maxErrPerNode, val = false; return; end;
-        val = true;
-    end
-    
+    this.kids{k}.insert_function(func, fdo_refine);
+end    
 end
 
 %/* ************************************************** */
@@ -341,27 +331,4 @@ function tree_clone = clone(tree_src)
 end
 
 end % methods static
-
-methods (Access = private)
-    %/* ************************************************** */
-    function err= compute_error(this, func, resPerNode,t)
-        [xxr,yyr,zzr,dx,dy,dz] = this.mesh(resPerNode);
-        % compute the function values on the local grid points
-        fre = func(t,xxr,yyr,zzr);   
-        % compute the center of the local grid cells
-        xxc = xxr+dx/2;
-        yyc = yyr+dy/2;
-        zzc = zzr+dz/2;
-        xxcc = xxc(1:end-1,1:end-1);
-        yycc = yyc(1:end-1,1:end-1);
-        zzcc = zzc(1:end-1,1:end-1);
-        % compute the exact values on the centers
-        fce = func(t,xxcc, yycc, zzcc);
-        % interpolate the function values on the center points
-        fci = interp2(xxr, yyr, fre, xxcc, yycc);        
-        % compute interpolation error
-        diff = fci - fce;
-        err = max(max(abs(diff)));
-    end
-end % methods private
 end % classdef

@@ -22,9 +22,9 @@ Z3 = func3(0,xx,yy,0);
 a = qtree;
 b = qtree;
 c = qtree;
-a.insert_function(@func1,maxErrorPerNode,maxLevel,resPerNode);
-b.insert_function(@func2,maxErrorPerNode,maxLevel,resPerNode);
-c.insert_function(@func3,maxErrorPerNode,maxLevel,resPerNode);
+a.insert_function(@func1,@do_refine);
+b.insert_function(@func2,@do_refine);
+c.insert_function(@func3,@do_refine);
 d = qtree.merge(a,b);
 e = qtree.merge(d,c);
 
@@ -69,4 +69,7 @@ fprintf('tree depth is %d\n', depth);
         value = gaussian(x,y);
     end
 
+    function val = do_refine(qtree,func,t)
+        val = tree_do_refine(qtree, func, maxErrorPerNode, maxLevel, resPerNode,t);
+    end
 end

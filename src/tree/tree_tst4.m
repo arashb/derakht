@@ -27,7 +27,7 @@ hold on;
 
 % create and plot the tree
 o = qtree;
-o.insert_function(@func3,maxErrorPerNode,maxLevel,resPerNode);
+o.insert_function(@func3,@do_refine);
 o.plottree;
 axis off; hold on;
 
@@ -64,6 +64,10 @@ fprintf('tree depth is %d\n', depth);
                 value(i,j) = norm([u(i,j), v(i,j)]);
             end
         end
+    end
+
+    function val = do_refine(qtree,func,t)
+        val = tree_do_refine(qtree, func, maxErrorPerNode, maxLevel, resPerNode,t);
     end
 end
 
