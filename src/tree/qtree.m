@@ -112,7 +112,7 @@ end
 
 % now we insert the function to the kids
 for k=1:4
-    this.kids{k}.insert_function(func, fdo_refine);
+    this.kids{k}.insert_function(func, fdo_refine, t);
 end    
 end
 
