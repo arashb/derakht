@@ -37,29 +37,38 @@ if DEBUG
 end
 
 % PERFORM ONE STEP SEMI-LAGRANGIAN FOR EACH TREE LEAF
+% TODO: remove tstep
 tstep = 1;
-c_leaves     = c.leaves();
 cnext_leaves = ctree_next.leaves();
-for lvcnt = 1:length(c_leaves)
-    c_leaf      = c_leaves{lvcnt};
-    cnext_leaf  = cnext_leaves{lvcnt};
+for lvcnt = 1:length(cnext_leaves)
+    cnext_leaf  = cnext_leaves{lvcnt};    
+    [xx,yy,zz,dx,dy,dz] = cnext_leaf.mesh(resPerNode);
     
-    [xx,yy,zz,dx,dy,dz] = c_leaf.mesh(resPerNode);
-    cnumsol = c_leaf.data.values;
+%     fconc = @conc_exact;
+%     fvel  = @vel_exact;
+    fconc_interp = @conc_interp;
+    fvel_interp  = @vel_interp;
+    cnext_values = semilag_rk2(xx,yy,zz,fconc_interp,fvel_interp,t,tstep);
     
-    %fconc = @conc_exact;
-    %fvel  = @vel_exact;
-    fconc = @conc;
-    fvel  = @vel;
-    cnext_values = semilag_rk2(xx,yy,zz,fconc,fvel,t,tstep);
-    
-    cnext_leaf.data.dim           = c_leaf.data.dim;
-    cnext_leaf.data.resolution    = c_leaf.data.resolution;
-    cnext_leaf.data.values(:,:,:) = cnext_values;
+    cnext_leaf.data.dim           = 1;
+    cnext_leaf.data.resolution    = resPerNode;
+    cnext_leaf.data.values = cnext_values;
 end
     
     %/* ************************************************** */
-    function ci = conc(tstep,xt,yt,zt)
+    function ci = conc_interp(tstep,xq,yq,zq)
+        ci = tree_data.interp_points(c,xq,yq,zq);        
+        ci = conc_out(ci,xq,yq,zq);
+        
+        function cq = conc_out(cq,xq,yq,zq)
+            % OUTSIDE THE SIMULATION DOMAIN
+            out = xq<0 | xq>1  | yq<0 | yq>1 | zq<0 | zq>1;
+            cq(out) = 0;
+        end
+    end
+
+    %/* ************************************************** */
+    function ci = conc_interp_deprecated(tstep,xt,yt,zt)
         ci = interp_conc_spatial(cnumsol,xx,yy,zz,tstep,xt,yt,zt,INTERP_TYPE,@conc_out);
         
         function cq = conc_out(cq,xq,yq,zq)                 
@@ -77,7 +86,7 @@ end
     end
 
     %/* ************************************************** */
-    function [uq,vq,wq] = vel(tq,xq,yq,zq)
+    function [uq,vq,wq] = vel_interp(tq,xq,yq,zq)
         uval = tree_data.interp_points(um,xq,yq,zq);
         vval = tree_data.interp_points(vm,xq,yq,zq);
         [uq,vq,wq,] = interp_vel_temporal(uval,vval,0,t,tq,INTERP_TYPE);
