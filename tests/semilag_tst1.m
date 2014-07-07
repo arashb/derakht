@@ -1,7 +1,8 @@
 function [] = semilag_tst1()
 clear; close all;
 clear global;
-addpath('../common/');
+addpath('../src/common/');
+addpath('../src/semilag/');
 PLOT_SOL = 1;
 VF_TYPE = 1;                    % type of velocity field
 CF_TYPE = 1;                    % type of intial concentration field

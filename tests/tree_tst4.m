@@ -1,41 +1,35 @@
-function tree_tst1()
+function tree_tst4()
 % test the creation of quadtree based on inserted function(s)
 clear all; clear globals; dim=2;  % constants  and preamble
-addpath('../common/');
+addpath('../src/common/');
+addpath('../src/tree/');
 global verbose;
+global gvfreq;
 
 % RUN PARAMETERS
-maxErrorPerNode = 0.0001;      % Error per box
+maxErrorPerNode = 0.001;      % Error per box
 maxLevel        = 20;          % maximum tree depth
-resPerNode      = 10;          % Resolution per box
 verbose         = false;
+resPerNode      = 10;
+gvfreq          = 1;
 
 % MAIN SCRIPT
-f1 = @func1;
-f2 = @func2;
-f3 = @func3;
 
 % plot the function
 res = 1000;
 x = linspace(0,1,res);
 y = linspace(0,1,res);
 [xx,yy] = meshgrid(x,y);
-Z1 = f1(0,xx,yy,0); 
-Z2 = f2(0,xx,yy,0);
-Z3 = f3(0,xx,yy,0);
+Z1 = func3(0,xx,yy,0); 
+
 contour(xx,yy,Z1);
-hold on
-contour(xx,yy,Z2);
-contour(xx,yy,Z3);
 colorbar;
 axis off;
 hold on;
 
 % create and plot the tree
 o = qtree;
-o.insert_function(f1,@do_refine);
-o.insert_function(f2,@do_refine);
-o.insert_function(f3,@do_refine);
+o.insert_function(@func3,@do_refine);
 o.plottree;
 axis off; hold on;
 
@@ -63,9 +57,15 @@ fprintf('tree depth is %d\n', depth);
     end
 
     function value = func3(t,x,y,z)
-        xc = 0.5;
-        yc = 0.5;
-        value = gaussian(x,y,xc,yc);
+        value = zeros(size(x));
+        xc = 0.5*ones(size(x)); 
+        yc = xc; zc = xc;
+        [u,v,w] = vel_rot(t,x,y,z,xc,yc,zc);
+        for i =1:size(x,1)
+            for j=1:size(y,2)
+                value(i,j) = norm([u(i,j), v(i,j)]);
+            end
+        end
     end
 
     function val = do_refine(qtree,func,t)

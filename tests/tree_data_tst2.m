@@ -1,13 +1,13 @@
-function tree_data_tst1()
-% test the interpolation of multidimensional values between two quadtrees with arbitrary
-% tree depth
-clear; clear globals; dim=2;  % constants  and preamble
-addpath('./../common/');
+function tree_data_tst2()
+% test of collapssing the values of two trees with the same structure
+close all; clear; clear globals; dim=2;  % constants  and preamble
+addpath('../src/common/');
+addpath('../src/tree/');
 global verbose;
 global gvfreq;
 
 % RUN PARAMETERS
-maxErrorPerNode = 0.001;      % Error per box
+maxErrorPerNode = 0.01;      % Error per box
 maxLevel        = 20;          % maximum tree depth
 verbose         = false;
 resPerNode      = 10;
@@ -16,59 +16,64 @@ gvfreq          = 1;
 % MAIN SCRIPT
 
 % create the first tree
-o = qtree;
-o.insert_function(@func1,@do_refine);
+a = qtree;
+a.insert_function(@func1,@do_refine);
 
 % init the fist tree's data with a given function
-tree_data.init_data(o,@func3,resPerNode)
+tree_data.init_data(a,@func1,resPerNode)
 
 % create the second tree 
-q = qtree;
-q.insert_function(@func2,@do_refine)
+b = qtree;
+b.insert_function(@func1,@do_refine)
+
+% init the fist tree's data with a given function
+tree_data.init_data(b,@func2,resPerNode)
 
 % interpolate second tree's data from the first tree
-tree_data.interp(o,q);
+%tree_data.interp(a,b);
+c = tree_data.collapse({a,b});
 
 if verbose
    % print morton ids, all nodes
    disp(' all nodes');
-   o.print_mids;
+   a.print_mids;
    % print morton ids, leaves only
    disp('  leaves only');
-   o.print_mids(true);
+   a.print_mids(true);
 end
-depth=find_depth(o);
+depth=find_depth(a);
 fprintf('tree depth is %d\n', depth);
 
 % PLOTTING
 
 subplot(3,2,1)
-tree_data.plot_grid(o)
-title('initial tree');
+a.plottree
+tree_data.plot_grid(a)
+title('a grid')
 
 subplot(3,2,2)
-tree_data.plot_grid(q)
-title('interpolant tree');
+tree_data.plot_grid(b)
+title('b grid')
 
 subplot(3,2,3)
-o.plottree;
-tree_data.plot_data(o,1)
-title('initial first value');
+a.plottree
+tree_data.plot_data(a,1)
+title('a values')
 
 subplot(3,2,4)
-q.plottree;
-tree_data.plot_data(q,1)
-title('interpolant first value');
+b.plottree
+tree_data.plot_data(b,1)
+title('b values')
 
 subplot(3,2,5)
-o.plottree;
-tree_data.plot_data(o,2)
-title('initial second value');
+c.plottree
+tree_data.plot_data(c,1)
+title('c values(:,1)')
 
 subplot(3,2,6)
-q.plottree;
-tree_data.plot_data(q,2)
-title('interpolant second value');
+c.plottree
+tree_data.plot_data(c,2)
+title('c values(:,2)')
 
     function value = func1(t,x,y,z)
         xc = 0.75;
@@ -82,7 +87,9 @@ title('interpolant second value');
         value = gaussian(x,y,xc,yc);
     end
 
-    function value = func3(t,x,y,z)
+    function value = func3(x,y)
+        t = 0;
+        z = 0;
         value = zeros(size(x));
         xc = 0.5*ones(size(x)); 
         yc = xc; zc = xc;
@@ -95,3 +102,5 @@ title('interpolant second value');
         val = tree_do_refine(qtree, func, maxErrorPerNode, maxLevel, resPerNode,t);
     end
 end
+
+

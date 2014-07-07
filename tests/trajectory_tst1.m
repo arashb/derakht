@@ -1,7 +1,8 @@
 function trajectory_tst1()
 clear; clear globals;
 close all;
-addpath '../common/';
+addpath('../src/common/');
+addpath('../src/semilag/');
 global verbose;
 global gvfreq;
 
