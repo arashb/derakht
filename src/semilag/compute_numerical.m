@@ -8,7 +8,7 @@ for tstep=1:tn
     fprintf('scheme: %s interp.: %s timestep: %d time:%f\n', NUM_SCHEME, INTERP_TYPE, tstep,tstep*dt);
     switch NUM_SCHEME
         case 'rk2'
-            cnumsol(:,:,:,tstep+1) = semilag_rk2(xx,yy,zz,@conc,@vel_prec,t,tstep);
+            cnumsol(:,:,:,tstep+1) = semilag_rk2(xx,yy,zz,@conc,@vel_prec,t);
             % clear the persistent precomputed velociy values for the previous time step
             interp_vel_precomputed(0,0,0,0,0,0,0,0,0,0,0,0,0,true);
         case '2tl'
@@ -25,8 +25,8 @@ for tstep=1:tn
 end
 
     %/* ************************************************** */
-    function ci = conc(tstep,xt,yt,zt)
-        ci = interp_conc_spatial(cnumsol,xx,yy,zz,tstep,xt,yt,zt,INTERP_TYPE,@conc_out);
+    function ci = conc(t,xt,yt,zt)
+        ci = interp_conc_spatial(cnumsol(:,:,:,tstep),xx,yy,zz,xt,yt,zt,INTERP_TYPE,@conc_out);
         
         function cq = conc_out(cq,xq,yq,zq)
             out = xq<0 | xq>1  | yq<0 | yq>1 | zq<0 | zq>1;
