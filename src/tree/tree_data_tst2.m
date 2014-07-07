@@ -16,14 +16,14 @@ gvfreq          = 1;
 
 % create the first tree
 a = qtree;
-a.insert_function(@func1,maxErrorPerNode,maxLevel,resPerNode);
+a.insert_function(@func1,@do_refine);
 
 % init the fist tree's data with a given function
 tree_data.init_data(a,@func1,resPerNode)
 
 % create the second tree 
 b = qtree;
-b.insert_function(@func1,maxErrorPerNode,maxLevel,resPerNode)
+b.insert_function(@func1,@do_refine)
 
 % init the fist tree's data with a given function
 tree_data.init_data(b,@func2,resPerNode)
@@ -95,6 +95,10 @@ title('c values(:,2)')
         [u,v,w] = vel_rot(t,x,y,z,xc,yc,zc);
         value(:,:,:,1) = u;
         value(:,:,:,2) = v;
+    end
+
+    function val = do_refine(qtree,func,t)
+        val = tree_do_refine(qtree, func, maxErrorPerNode, maxLevel, resPerNode,t);
     end
 end
 

@@ -17,14 +17,14 @@ gvfreq          = 1;
 
 % create the first tree
 o = qtree;
-o.insert_function(@func1,maxErrorPerNode,maxLevel,resPerNode);
+o.insert_function(@func1,@do_refine);
 
 % init the fist tree's data with a given function
 tree_data.init_data(o,@func3,resPerNode)
 
 % create the second tree 
 q = qtree;
-q.insert_function(@func2,maxErrorPerNode,maxLevel,resPerNode)
+q.insert_function(@func2,@do_refine)
 
 % interpolate second tree's data from the first tree
 tree_data.interp(o,q);
@@ -89,5 +89,9 @@ title('interpolant second value');
         [u,v,w] = vel_rot(t,x,y,z,xc,yc,zc);
         value(:,:,:,1) = u;
         value(:,:,:,2) = v;
+    end
+
+    function val = do_refine(qtree,func,t)
+        val = tree_do_refine(qtree, func, maxErrorPerNode, maxLevel, resPerNode,t);
     end
 end
