@@ -92,10 +92,7 @@ classdef tree_data < handle
                         
                         xx = dst_xxr(indices);
                         yy = dst_yyr(indices);
-                        if verbose
-                            fprintf('interpolate values of dst node %d from src node %d\n',dst_lvcnt, src_lvcnt);
-                        end
-                                                
+          
                         [src_xxr,src_yyr,src_zzr,src_dx,src_dy,src_dz] = src_leaf.mesh(resPerNode);
                                                 
                         interp_data = src_leaf.data.values(:,:,:,dimcnt);

@@ -218,7 +218,7 @@ function print_mids(this,leaves_only)
     if leaves_only & ~this.isleaf, return; end;
     fprintf('mid:');
     id = mid.id(this.level,this.anchor);
-    %mid.print(id);
+    mid.print(id);
     fprintf(' %20u at level %2d: anchor:[%1.4f %1.4f]\n',...
             id, this.level,this.anchor(1),this.anchor(2));
 
@@ -290,11 +290,11 @@ function tree = mids2tree(mids_list, leaves_only)
     %/* ************************************************** */
     function [node, counter] = construct_tree(parent, mids_list, counter)
         %if counter > length(mids_list), return; end;
-        global verbose
+        global debug
         id = mids_list(counter);
         mido = morton_id;
         [lvl, anc] = mido.id2node(id);
-        if verbose
+        if debug
             fprintf('construncting: %20u at level %2d: anchor:[%1.4f %1.4f]\n',...
                 id, lvl,anc(1),anc(2));
         end

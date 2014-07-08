@@ -1,6 +1,4 @@
 function main()
-%UNTITLED Summary of this function goes here
-%   Detailed explanation goes here
 clear; clear globals; % constants  and preamble
 addpath semilag
 addpath tree
@@ -19,36 +17,38 @@ global INTERP_TYPE;
 maxErrorPerNode = 0.001;        % Error per box
 maxLevel        = 20;           % Maximum tree depth
 resPerNode      = 15;           % Resolution per Node
-verbose         = false;
+verbose         = true;
 gvfreq          = 1;
 dim             = 2;
 DEBUG           = false;
 INTERP_TYPE     = 'cubic';
 
 % MAIN SCRIPT
-fconc_exact   = @conc_exact_1;
+fconc_exact   = @conc_exact_2;
 fvelx_exact   = @velx_exact;
 fvely_exact   = @vely_exact;
 
 % CONSTRUCT AND INIT THE TREES VALUES
 fprintf('-> init the trees\n');
+
 % CONCENTRATION
 c = qtree;
 tinit = 0;
 c.insert_function(fconc_exact,@do_refine,tinit);
 tree_data.init_data(c,fconc_exact,resPerNode,tinit);
 
-cdepth = c.find_depth();
-cwidth = 1/2^cdepth;
-dx     = cwidth/resPerNode;
-cfl = 100;
-om  = 1;
-dt  = cfl*dx/om;
+% SIMULATION PARAMETERS BASED ON INITIAL CCONC. TREE
+cdepth      = c.find_depth();
+cwidth      = 1/2^cdepth;
+dx          = cwidth/resPerNode;
+cfl         = 200;
+om          = 1;
+dt          = cfl*dx/om;
 VPREVTSTEP  = 1;
 VCURTSTEP   = 2;
 VNEXTSTEP   = 3;
 V2NEXTSTEP  = 4;
-t   = [-dt 0 dt 2*dt];
+t           = [-dt 0 dt 2*dt];
 
 fprintf('--> tree depth: %d\n',cdepth);
 fprintf('--> cfl: %d\n',cfl);
@@ -71,16 +71,6 @@ for tcnt = 1:nt
     vcells{tcnt} = vtmptree;
 end
 
-% VELOCITY (TIME-INDEPENDENT)
-% u = qtree;
-% u.insert_function(fvel_valx,maxErrorPerNode,maxLevel,resPerNode);
-% v = qtree;
-% v.insert_function(fvel_valy,maxErrorPerNode,maxLevel,resPerNode);
-% tree_data.init_data(u,fvel_valx,resPerNode);
-% tree_data.init_data(v,fvel_valy,resPerNode);
-% ucells = {u,u,u,u};
-% vcells = {v,v,v,v};
-
 % MERGE VELOCITY TREES
 fprintf('-> merge velocity trees\n');
 num     = size(ucells,2);
@@ -90,7 +80,7 @@ vm_tree = merge(vcells);
 vmcells = clone(vm_tree,num);
 
 % INTERPOLATE VELOCITY VALUES ON THE MERGED TREES
-fprintf('-> interpolate velocity values on the merged trees\n');
+fprintf('-> interpolate velocity values on the merged tree\n');
 for i =1:num
     tree_data.interp(ucells{i}, umcells{i});
     tree_data.interp(vcells{i}, vmcells{i});
@@ -99,37 +89,85 @@ end
 um = tree_data.collapse(umcells);
 vm = tree_data.collapse(vmcells);
 
-% INIT THE TREE FOR THE NEXT TIME STEP
-% same structure as ctree
-% TODO: Any other idea?
-cnext_tree = qtree.clone(c);
-
 % ADVECT
-fprintf('-> perform one step semi-lagrangian on each tree leaf\n');
-%fconc = @conc_exact;
-%fvel  = @vel_exact;
-fconc_interp = @conc_interp;
-fvel_interp  = @vel_interp;
+fprintf('-> performing one step semi-lagrangian\n');
+%fconc           = @conc_exact;
+%fvel            = @vel_exact;
+fconc_interp    = @conc_interp;
+fvel_interp     = @vel_interp;
+%fsemilag        = fconc_exact;
+fsemilag        = @semilag;
 
-cnext = advect_tree_semilag(cnext_tree,fconc_interp,fvel_interp,t);
+% FIRST METHOD: CONSTRUCT THE NEXT TIME STEP TREE FROM SCRATCH WITH 
+%               SEMILAG SOLVER AS REFINEMENT FUNCTION
+% cnext = qtree;
+% cnext.insert_function(fsemilag,@do_refine);
+% tree_data.init_data(cnext,fsemilag,resPerNode);
+
+% SECOND METHOD: USE THE PREVIOUS TIME STEP TREE AS STARTING POINT
+%                REFINE/COARSEN WHENEVER IS NEEDED
+cnext = qtree.clone(c);
 
 % CHECK IF CNEXT LEAVES NEED REFINEMENT
 fprintf('-> check if the new tree needs refinement\n');
-%fsemilag = fconc_exact;
-fsemilag = @semilag;
+
 cnext_leaves = cnext.leaves();
 for lvcnt = 1:length(cnext_leaves)
     cnext_leaf = cnext_leaves{lvcnt};
-    if do_refine(cnext_leaf,fsemilag,t(VNEXTSTEP))
-        fprintf('--> refining leaf: %d\n',lvcnt);
-        cnext_leaf.data = [];
-        cnext_leaf.create_kids();
-        cnext_leaf = advect_tree_semilag(cnext_leaf,fconc_interp,fvel_interp,t);
-    end    
+    refine(cnext_leaf);
 end
+
+    function refine(leaf)
+        if do_refine(leaf,fsemilag,t(VNEXTSTEP))
+            if verbose,
+                mid = morton_id;
+                id = mid.id(leaf.level,leaf.anchor);
+                fprintf('--> refine leaf: ')
+                mid.print(id)
+                fprintf(' level %2d: anchor:[%1.4f %1.4f] \n', ...
+                    leaf.level,leaf.anchor(1),leaf.anchor(2));
+            end
+            leaf.data = [];
+            leaf.create_kids();
+            for kcnt=1:4, refine(leaf.kids{kcnt}); end;
+            return
+        end
+    end
 
 % CHECK IF CNEXT LEAVES NEED COARSENING
 fprintf('-> check if the new tree needs coarsening\n');
+cnext.print_mids(true);
+coarsen(cnext,@do_coarsen); 
+
+    %/* ************************************************** */
+    function val = coarsen(tree, fvisit)
+        val = true;
+        kidsval = true;
+        if ~tree.isleaf
+            for k=1:4
+                kidval = coarsen(tree.kids{k}, fvisit);
+                kidsval = kidsval & kidval; 
+            end
+        end
+        myval = fvisit(tree,fsemilag,t(VNEXTSTEP));
+        if myval & kidsval
+            if verbose,
+                mid = morton_id;
+                id = mid.id(tree.level,tree.anchor);
+                fprintf('--> coarsen leaf: ')
+                mid.print(id)
+                fprintf(' level %2d: anchor:[%1.4f %1.4f] \n', ...
+                    tree.level,tree.anchor(1),tree.anchor(2));
+            end
+            tree.kids = [];
+            tree.isleaf = true;
+            return;
+        end
+        val = false;
+    end
+
+        
+advect_tree_semilag(cnext,fconc_interp,fvel_interp,t);
 
 % PLOT THE RESULTS
 figure('Name','SEMI-LAG QUAD-TREES');
@@ -240,6 +278,12 @@ saveas(f,s_fig_name,'pdf');
     end
 
     %/* ************************************************** */
+    function val = do_coarsen(qtree,func,t)
+        tmpval = tree_do_refine(qtree,func,maxErrorPerNode,maxLevel,resPerNode,t);
+        val = ~tmpval;
+    end
+
+    %/* ************************************************** */
     function [mt] = merge(treecells)
         mt = treecells{1};
         for counter=2:length(treecells)
@@ -286,6 +330,13 @@ theta = 0;
 sigmax = 0.05;
 sigmay = 0.05;
 value = gaussian(x,y,xct,yct,theta,sigmax,sigmay);
+end
+
+%/* ************************************************** */
+function value = conc_exact_3(t,x,y,z)
+xi = 0;
+xf = 1;
+value = slotted_cylinder( xi, xf, x, y, z);
 end
 
 %/* ************************************************** */
