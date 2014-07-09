@@ -24,7 +24,7 @@ DEBUG           = false;
 INTERP_TYPE     = 'cubic';
 
 % MAIN SCRIPT
-fconc_exact   = @conc_exact_2;
+fconc_exact   = @conc_exact_22;
 fvelx_exact   = @velx_exact;
 fvely_exact   = @vely_exact;
 
@@ -41,7 +41,7 @@ tree_data.init_data(c,fconc_exact,resPerNode,tinit);
 cdepth      = c.find_depth();
 cwidth      = 1/2^cdepth;
 dx          = cwidth/resPerNode;
-cfl         = 200;
+cfl         = 100;
 om          = 1;
 dt          = cfl*dx/om;
 VPREVTSTEP  = 1;
@@ -136,7 +136,7 @@ end
 
 % CHECK IF CNEXT LEAVES NEED COARSENING
 fprintf('-> check if the new tree needs coarsening\n');
-cnext.print_mids(true);
+%cnext.print_mids(true);
 coarsen(cnext,@do_coarsen); 
 
     %/* ************************************************** */
@@ -330,6 +330,37 @@ theta = 0;
 sigmax = 0.05;
 sigmay = 0.05;
 value = gaussian(x,y,xct,yct,theta,sigmax,sigmay);
+end
+
+%/* ************************************************** */
+function value = conc_exact_22(t,x,y,z)
+xc = 0.5;
+yc = 0.5;
+theta = 0;
+sigmax = 0.05;
+sigmay = 0.05;
+om = 1;
+
+xc1 = 0.75;
+yc1 = 0.75;
+[alpha1,RHO1] = cart2pol(xc1-xc,yc1-xc);
+alphat1 = alpha1 + t*om;
+[xct,yct] = pol2cart(alphat1,RHO1);
+xct = xct + xc;
+yct = yct + yc;
+value1 = gaussian(x,y,xct,yct,theta,sigmax,sigmay);
+
+xc2 = 0.25;
+yc2 = 0.25;
+[alpha2,RHO2] = cart2pol(xc2-xc,yc2-xc);
+alphat2 = alpha2 + t*om;
+[xct,yct] = pol2cart(alphat2,RHO2);
+xct = xct + xc;
+yct = yct + yc;
+value2 = gaussian(x,y,xct,yct,theta,sigmax,sigmay);
+
+value = value1 + value2;
+
 end
 
 %/* ************************************************** */
