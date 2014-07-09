@@ -24,7 +24,7 @@ DEBUG           = false;
 INTERP_TYPE     = 'cubic';
 
 % MAIN SCRIPT
-fconc_exact   = @conc_exact_22;
+fconc_exact   = @conc_exact_2;
 fvelx_exact   = @velx_exact;
 fvely_exact   = @vely_exact;
 
@@ -91,12 +91,14 @@ vm = tree_data.collapse(vmcells);
 
 % ADVECT
 fprintf('-> performing one step semi-lagrangian\n');
-%fconc           = @conc_exact;
-%fvel            = @vel_exact;
+%fconc_interp    = @conc_exact;
+%fvel_interp     = @vel_exact;
 fconc_interp    = @conc_interp;
 fvel_interp     = @vel_interp;
 %fsemilag        = fconc_exact;
 fsemilag        = @semilag;
+
+tic
 
 % FIRST METHOD: CONSTRUCT THE NEXT TIME STEP TREE FROM SCRATCH WITH 
 %               SEMILAG SOLVER AS REFINEMENT FUNCTION
@@ -107,67 +109,75 @@ fsemilag        = @semilag;
 % SECOND METHOD: USE THE PREVIOUS TIME STEP TREE AS STARTING POINT
 %                REFINE/COARSEN WHENEVER IS NEEDED
 cnext = qtree.clone(c);
+update_tree(cnext,@do_refine);
+toc
 
-% CHECK IF CNEXT LEAVES NEED REFINEMENT
-fprintf('-> check if the new tree needs refinement\n');
-
-cnext_leaves = cnext.leaves();
-for lvcnt = 1:length(cnext_leaves)
-    cnext_leaf = cnext_leaves{lvcnt};
-    refine(cnext_leaf);
-end
-
-    function refine(leaf)
-        if do_refine(leaf,fsemilag,t(VNEXTSTEP))
-            if verbose,
-                mid = morton_id;
-                id = mid.id(leaf.level,leaf.anchor);
-                fprintf('--> refine leaf: ')
-                mid.print(id)
-                fprintf(' level %2d: anchor:[%1.4f %1.4f] \n', ...
-                    leaf.level,leaf.anchor(1),leaf.anchor(2));
-            end
-            leaf.data = [];
-            leaf.create_kids();
-            for kcnt=1:4, refine(leaf.kids{kcnt}); end;
-            return
-        end
-    end
-
-% CHECK IF CNEXT LEAVES NEED COARSENING
-fprintf('-> check if the new tree needs coarsening\n');
-%cnext.print_mids(true);
-coarsen(cnext,@do_coarsen); 
-
-    %/* ************************************************** */
-    function val = coarsen(tree, fvisit)
+    function val = update_tree(node, fvisit)
         val = true;
         kidsval = true;
-        if ~tree.isleaf
+        if ~node.isleaf
             for k=1:4
-                kidval = coarsen(tree.kids{k}, fvisit);
-                kidsval = kidsval & kidval; 
+                kidval = update_tree(node.kids{k}, fvisit);
+                kidsval = kidsval & kidval;
             end
         end
-        myval = fvisit(tree,fsemilag,t(VNEXTSTEP));
-        if myval & kidsval
+        [refine_node, values] = fvisit(node,fsemilag,t(VNEXTSTEP));
+        % REFINE THE NODE
+        if refine_node & isempty(node.kids())
             if verbose,
                 mid = morton_id;
-                id = mid.id(tree.level,tree.anchor);
-                fprintf('--> coarsen leaf: ')
+                id = mid.id(node.level,node.anchor);
+                fprintf('--> refine node: ')
                 mid.print(id)
                 fprintf(' level %2d: anchor:[%1.4f %1.4f] \n', ...
-                    tree.level,tree.anchor(1),tree.anchor(2));
+                    node.level,node.anchor(1),node.anchor(2));
             end
-            tree.kids = [];
-            tree.isleaf = true;
+            refine(node);
+            for kcnt=1:4, update_tree(node.kids{kcnt},fvisit); end;
+            val = false;
+            return
+        end
+        % COARSEN THE NODE
+        if ~refine_node & kidsval & ~isempty(node.kids())
+            if verbose,
+                mid = morton_id;
+                id = mid.id(node.level,node.anchor);
+                fprintf('--> coarsen node: ')
+                mid.print(id)
+                fprintf(' level %2d: anchor:[%1.4f %1.4f] \n', ...
+                    node.level,node.anchor(1),node.anchor(2));
+            end
+            coarsen(node)
+            set_node_values(node, values);
             return;
         end
-        val = false;
+        % KEEP THE NODE AS IT IS
+        set_node_values(node, values);
+        
+        function set_node_values(node, values)
+            if verbose,
+                mid = morton_id;
+                id = mid.id(node.level,node.anchor);
+                fprintf('--> set semilag values for node: ')
+                mid.print(id)
+                fprintf(' level %2d: anchor:[%1.4f %1.4f] \n', ...
+                    node.level,node.anchor(1),node.anchor(2));
+            end
+            node.data.dim           = 1;
+            node.data.resolution    = resPerNode;
+            node.data.values = values;
+        end
     end
 
-        
-advect_tree_semilag(cnext,fconc_interp,fvel_interp,t);
+    function refine(node)
+        node.data = [];
+        node.create_kids();
+    end
+
+    function coarsen(node)
+        node.kids = [];
+        node.isleaf = true;
+    end
 
 % PLOT THE RESULTS
 figure('Name','SEMI-LAG QUAD-TREES');
@@ -273,8 +283,8 @@ saveas(f,s_fig_name,'pdf');
     end
 
     %/* ************************************************** */
-    function val = do_refine(qtree,func,t)
-        val = tree_do_refine(qtree,func,maxErrorPerNode,maxLevel,resPerNode,t);
+    function [val, funcval] = do_refine(qtree,func,t)
+        [val, funcval] = tree_do_refine(qtree,func,maxErrorPerNode,maxLevel,resPerNode,t);
     end
 
     %/* ************************************************** */
@@ -316,7 +326,7 @@ function value = conc_exact_2(t,x,y,z)
 xc = 0.5;
 yc = 0.5;
 xci = 0.75;
-yci = 0.75;
+yci = 0.25;
 om = 1;
 
 [alpha,RHO] = cart2pol(xci-xc,yci-xc);

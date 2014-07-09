@@ -1,4 +1,4 @@
-function err= tree_compute_error(qtree, func, resPerNode,t)
+function [err, fre]= tree_compute_error(qtree, func, resPerNode,t)
 [xxr,yyr,zzr,dx,dy,dz] = qtree.mesh(resPerNode);
 % compute the function values on the local grid points
 fre = func(t,xxr,yyr,zzr);
