@@ -1,26 +1,185 @@
 %/* ************************************************** */
-function advect_tree_semilag(cnext,fconc_interp,fvel_interp,t)
+function cnext = advect_tree_semilag(c,fvelx,fvely,t,fdo_refine,fconc_exact,fvel_exact)
 global resPerNode;
 global verbose;
+global INTERP_TYPE;
 
-% PERFORM ONE STEP SEMI-LAGRANGIAN FOR EACH TREE LEAF
-cnext_leaves = cnext.leaves();
-for lvcnt = 1:length(cnext_leaves)
-    cnext_leaf  = cnext_leaves{lvcnt};
-    if verbose,
-        mid = morton_id;
-        id = mid.id(cnext_leaf.level,cnext_leaf.anchor);
-        fprintf('--> compute semilag for leaf: ')
-        mid.print(id)
-        fprintf(' level %2d: anchor:[%1.4f %1.4f] \n', ...
-            cnext_leaf.level,cnext_leaf.anchor(1),cnext_leaf.anchor(2));
-    end
-    [xx,yy,zz,dx,dy,dz] = cnext_leaf.mesh(resPerNode);
+VPREVTSTEP  = 1;
+VCURTSTEP   = 2;
+VNEXTSTEP   = 3;
+V2NEXTSTEP  = 4;
+
+% VELOCITY (TIME-DEPENDENT)
+nt = length(t);
+ucells = cell(1,nt);
+vcells = cell(1,nt);
+
+for tcnt = 1:nt
+    utmptree = qtree;
+    utmptree.insert_function(fvelx,fdo_refine,t(tcnt));
+    tree_data.init_data(utmptree,fvelx,resPerNode,t(tcnt));
+    ucells{tcnt} = utmptree;
     
-    cnext_values = semilag_rk2(xx,yy,zz,fconc_interp,fvel_interp,t);
-    
-    cnext_leaf.data.dim           = 1;
-    cnext_leaf.data.resolution    = resPerNode;
-    cnext_leaf.data.values = cnext_values;
+    vtmptree = qtree;
+    vtmptree.insert_function(fvely,fdo_refine,t(tcnt));
+    tree_data.init_data(vtmptree,fvely,resPerNode,t(tcnt));
+    vcells{tcnt} = vtmptree;
 end
+
+% MERGE VELOCITY TREES
+fprintf('-> merge velocity trees\n');
+num     = size(ucells,2);
+um_tree = merge(ucells);
+umcells = clone(um_tree,num);
+vm_tree = merge(vcells);
+vmcells = clone(vm_tree,num);
+
+% INTERPOLATE VELOCITY VALUES ON THE MERGED TREES
+fprintf('-> interpolate velocity values on the merged tree\n');
+for i =1:num
+    tree_data.interp(ucells{i}, umcells{i});
+    tree_data.interp(vcells{i}, vmcells{i});
+end
+
+um = tree_data.collapse(umcells);
+vm = tree_data.collapse(vmcells);
+
+% ADVECT
+fprintf('-> performing one step semi-lagrangian\n');
+%fconc_interp    = @conc_exact;
+fconc_interp    = @conc_interp;
+%fvel_interp     = @vel_exact;
+fvel_interp     = @vel_interp;
+%fsemilag        = fconc_exact;
+fsemilag        = @semilag;
+
+tic
+% FIRST METHOD: CONSTRUCT THE NEXT TIME STEP TREE FROM SCRATCH WITH
+%               SEMILAG SOLVER AS REFINEMENT FUNCTION
+% cnext = qtree;
+% cnext.insert_function(fsemilag,fdo_refine);
+% tree_data.init_data(cnext,fsemilag,resPerNode);
+
+% SECOND METHOD: USE THE PREVIOUS TIME STEP TREE AS STARTING POINT
+%                REFINE/COARSEN WHENEVER IS NEEDED
+cnext = qtree.clone(c);
+update_tree(cnext,fdo_refine);
+toc
+
+    function val = update_tree(node, fvisit)
+        val = true;
+        kidsval = true;
+        if ~node.isleaf
+            for k=1:4
+                kidval = update_tree(node.kids{k}, fvisit);
+                kidsval = kidsval & kidval;
+            end
+        end
+        [refine_node, values] = fvisit(node,fsemilag,t(VNEXTSTEP));
+        % REFINE THE NODE
+        if refine_node & isempty(node.kids())
+            if verbose,
+                mid = morton_id;
+                id = mid.id(node.level,node.anchor);
+                fprintf('--> refine node: ')
+                mid.print(id)
+                fprintf(' level %2d: anchor:[%1.4f %1.4f] \n', ...
+                    node.level,node.anchor(1),node.anchor(2));
+            end
+            refine(node);
+            for kcnt=1:4, update_tree(node.kids{kcnt},fvisit); end;
+            val = false;
+            return
+        end
+        % COARSEN THE NODE
+        if ~refine_node & kidsval & ~isempty(node.kids())
+            if verbose,
+                mid = morton_id;
+                id = mid.id(node.level,node.anchor);
+                fprintf('--> coarsen node: ')
+                mid.print(id)
+                fprintf(' level %2d: anchor:[%1.4f %1.4f] \n', ...
+                    node.level,node.anchor(1),node.anchor(2));
+            end
+            coarsen(node)
+            set_node_values(node, values);
+            return;
+        end
+        % KEEP THE NODE AS IT IS
+        set_node_values(node, values);
+        
+        function set_node_values(node, values)
+            if verbose,
+                mid = morton_id;
+                id = mid.id(node.level,node.anchor);
+                fprintf('--> set semilag values for node: ')
+                mid.print(id)
+                fprintf(' level %2d: anchor:[%1.4f %1.4f] \n', ...
+                    node.level,node.anchor(1),node.anchor(2));
+            end
+            node.data.dim           = 1;
+            node.data.resolution    = resPerNode;
+            node.data.values = values;
+        end
+    end
+
+    function refine(node)
+        node.data = [];
+        node.create_kids();
+    end
+
+    function coarsen(node)
+        node.kids = [];
+        node.isleaf = true;
+    end
+
+    function val = semilag(tdummy,x,y,z)
+        val = semilag_rk2(x,y,z,fconc_interp,fvel_interp,t);
+    end
+
+%/* ************************************************** */
+    function ci = conc_interp(tq,xq,yq,zq)
+        ci = tree_data.interp_points(c,xq,yq,zq);
+        ci = conc_out(ci,xq,yq,zq);
+        
+        function cq = conc_out(cq,xq,yq,zq)
+            % OUTSIDE THE SIMULATION DOMAIN
+            ce = fconc_exact(tq,xq,yq,zq);
+            out = xq<0 | xq>1  | yq<0 | yq>1 | zq<0 | zq>1;
+            cq(out) = ce(out);
+        end
+    end
+
+%/* ************************************************** */
+    function [uq,vq,wq] = vel_interp(tq,xq,yq,zq)
+        uval = tree_data.interp_points(um,xq,yq,zq);
+        vval = tree_data.interp_points(vm,xq,yq,zq);
+        [uq,vq,wq,] = interp_vel_temporal(uval,vval,0,t,tq,INTERP_TYPE);
+        [uq,vq,wq] = vel_out(uq,vq,wq,xq,yq,zq);
+        
+        function [uq,vq,wq] = vel_out(uq,vq,wq,xq,yq,zq)
+            % OUTSIDE THE SIMULATION DOMAIN
+            out = xq<0 | xq>1  | yq<0 | yq>1 | zq<0 | zq>1;
+            [ue, ve, we] = fvel_exact(tq,xq,vq,zq);
+            uq(out) = ue(out);
+            vq(out) = ve(out);
+            wq(out) = we(out);
+        end
+    end
+
+%/* ************************************************** */
+    function [mt] = merge(treecells)
+        mt = treecells{1};
+        for counter=2:length(treecells)
+            mt = qtree.merge(mt, treecells{counter});
+        end
+    end
+
+%/* ************************************************** */
+    function [tree_clones] = clone(tree_src, num)
+        tree_clones = cell(1,num);
+        for counter=1:num
+            tree_clones{counter} = qtree.clone(tree_src);
+        end
+    end
 end
