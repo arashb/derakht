@@ -66,6 +66,10 @@ cnext = qtree.clone(c);
 update_tree(cnext,fdo_refine);
 toc
 
+if verbose
+    plotvel();
+end
+
     function val = update_tree(node, fvisit)
         val = true;
         kidsval = true;
@@ -181,5 +185,58 @@ toc
         for counter=1:num
             tree_clones{counter} = qtree.clone(tree_src);
         end
+    end
+
+    function plotvel()
+        figure('Name','SEMI-LAG QUAD-TREES');        
+        subplot(3,4,2)
+        c.plottree;
+        tree_data.plot_data(c);
+        title('c(t)');
+        
+        subplot(3,4,3)
+        cnext.plottree;
+        tree_data.plot_data(cnext);
+        title('c(t+dt)');
+        
+        subplot(3,4,5)
+        ucells{1}.plottree;
+        tree_data.plot_data(ucells{1});
+        title('u(t(n-1))');
+        
+        subplot(3,4,6)
+        ucells{2}.plottree;
+        tree_data.plot_data(ucells{2});
+        title('u(t(n))');
+        
+        subplot(3,4,7)
+        ucells{3}.plottree;
+        tree_data.plot_data(ucells{3});
+        title('u(t(n+1))');
+        
+        subplot(3,4,8)
+        ucells{4}.plottree;
+        tree_data.plot_data(ucells{4});
+        title('u(t(n+2))');
+        
+        subplot(3,4,9)
+        vcells{1}.plottree;
+        tree_data.plot_data(vcells{1});
+        title('v(t(n-1))');
+        
+        subplot(3,4,10)
+        vcells{2}.plottree;
+        tree_data.plot_data(vcells{2});
+        title('v(t(n))');
+        
+        subplot(3,4,11)
+        vcells{3}.plottree;
+        tree_data.plot_data(vcells{3});
+        title('v(t(n+1))');
+        
+        subplot(3,4,12)
+        vcells{4}.plottree;
+        tree_data.plot_data(vcells{4});
+        title('v(t(n+2))');
     end
 end

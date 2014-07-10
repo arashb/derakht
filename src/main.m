@@ -14,9 +14,9 @@ global maxLevel;
 global INTERP_TYPE;
 
 % RUN PARAMETERS
-maxErrorPerNode = 0.001;        % Error per box
-maxLevel        = 5;           % Maximum tree depth
-resPerNode      = 15;           % Resolution per Node
+maxErrorPerNode = 0.0001;        % Error per box
+maxLevel        = 20;           % Maximum tree depth
+resPerNode      = 15;          % Resolution per Node
 verbose         = true;
 gvfreq          = 1;
 dim             = 2;
@@ -52,7 +52,7 @@ VCURTSTEP   = 2;
 VNEXTSTEP   = 3;
 V2NEXTSTEP  = 4;
 t           = tinit + [-dt 0 dt 2*dt];
-tn = 3;
+tn          = 3;
 
 fprintf('--> init tree depth: %d\n',cdepth);
 fprintf('--> cfl: %d\n',cfl);
@@ -67,68 +67,15 @@ for tstep =1:tn
     cnext = advect_tree_semilag(c,fvelx,fvely,t,@do_refine,fconc_exact,@vel_exact);
     
     plot_res(c,cnext);
+    
     c = cnext;
     t = t + dt;    
 end
 
 close(writerObj);
 
-% PLOT THE RESULTS
-    function plot_res(c, cnext)
-%         if verbose
-%             figure('Name','SEMI-LAG QUAD-TREES');
-%             
-%             subplot(3,4,2)
-%             c.plottree;
-%             tree_data.plot_data(c);
-%             title('c(t)');
-%             
-%             subplot(3,4,3)
-%             cnext.plottree;
-%             tree_data.plot_data(cnext);
-%             title('c(t+dt)');
-%             
-%             subplot(3,4,5)
-%             ucells{1}.plottree;
-%             tree_data.plot_data(ucells{1});
-%             title('u(t(n-1))');
-%             
-%             subplot(3,4,6)
-%             ucells{2}.plottree;
-%             tree_data.plot_data(ucells{2});
-%             title('u(t(n))');
-%             
-%             subplot(3,4,7)
-%             ucells{3}.plottree;
-%             tree_data.plot_data(ucells{3});
-%             title('u(t(n+1))');
-%             
-%             subplot(3,4,8)
-%             ucells{4}.plottree;
-%             tree_data.plot_data(ucells{4});
-%             title('u(t(n+2))');
-%             
-%             subplot(3,4,9)
-%             vcells{1}.plottree;
-%             tree_data.plot_data(vcells{1});
-%             title('v(t(n-1))');
-%             
-%             subplot(3,4,10)
-%             vcells{2}.plottree;
-%             tree_data.plot_data(vcells{2});
-%             title('v(t(n))');
-%             
-%             subplot(3,4,11)
-%             vcells{3}.plottree;
-%             tree_data.plot_data(vcells{3});
-%             title('v(t(n+1))');
-%             
-%             subplot(3,4,12)
-%             vcells{4}.plottree;
-%             tree_data.plot_data(vcells{4});
-%             title('v(t(n+2))');
-%         end
-        
+    % PLOT THE RESULTS
+    function plot_res(c, cnext)        
         f = figure('Name','SEMI-LAG ADVECTION');
         subplot(1,2,1);
         c.plottree(0.5);
