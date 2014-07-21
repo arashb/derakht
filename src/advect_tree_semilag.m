@@ -1,6 +1,6 @@
-%/* ************************************************** */ 
+%/* ************************************************** */
 %     Copyright 2014 Arash Bakhtiari
-%    
+%
 %     you may not use this file except in compliance with the License.
 %     You obtain a copy of the License in the LICENSE file
 %
@@ -82,13 +82,13 @@ if verbose
     plotvel();
 end
 
-    function val = update_tree(node, fvisit)
-        val = true;
-        kidsval = true;
+    function coarsenme = update_tree(node, fvisit)
+        coarsenme = true;
+        coarsenkids = true;
         if ~node.isleaf
             for k=1:4
                 kidval = update_tree(node.kids{k}, fvisit);
-                kidsval = kidsval & kidval;
+                coarsenkids = coarsenkids & kidval;
             end
         end
         [refine_node, values] = fvisit(node,fsemilag,t(VNEXTSTEP));
@@ -104,11 +104,10 @@ end
             end
             refine(node);
             for kcnt=1:4, update_tree(node.kids{kcnt},fvisit); end;
-            val = false;
+            coarsenme = false;
             return
-        end
-        % COARSEN THE NODE
-        if ~refine_node & kidsval & ~isempty(node.kids())
+            % COARSEN THE NODE
+        elseif coarsenkids
             if verbose,
                 mid = morton_id;
                 id = mid.id(node.level,node.anchor);
@@ -118,10 +117,7 @@ end
                     node.level,node.anchor(1),node.anchor(2));
             end
             coarsen(node)
-            set_node_values(node, values);
-            return;
         end
-        % KEEP THE NODE AS IT IS
         set_node_values(node, values);
         
         function set_node_values(node, values)
@@ -200,7 +196,7 @@ end
     end
 
     function plotvel()
-        figure('Name','SEMI-LAG QUAD-TREES');        
+        figure('Name','SEMI-LAG QUAD-TREES');
         subplot(3,4,2)
         c.plottree;
         tree_data.plot_data(c);
