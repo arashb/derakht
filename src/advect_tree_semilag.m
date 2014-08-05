@@ -90,39 +90,84 @@ end
                 kidval = update_tree(node.kids{k}, fvisit);
                 kidsval = kidsval & kidval;
             end
-        end
-        [refine_node, values] = fvisit(node,fsemilag,t(VNEXTSTEP));
-        % REFINE THE NODE
-        if refine_node & isempty(node.kids())
-            if verbose,
-                mid = morton_id;
-                id = mid.id(node.level,node.anchor);
-                fprintf('--> refine node: ')
-                mid.print(id)
-                fprintf(' level %2d: anchor:[%1.4f %1.4f] \n', ...
-                    node.level,node.anchor(1),node.anchor(2));
+	    if kidsval
+	      [refine_node, values] = fvisit(node,fsemilag,t(VNEXTSTEP));
+	      if refine_node
+		 val = false;
+		 return;
+	      else
+		% COARSEN THE NODE
+		if verbose,
+                  mid = morton_id;
+                  id = mid.id(node.level,node.anchor);
+                  fprintf('--> coarsen node: ')
+                  mid.print(id)
+                  fprintf(' level %2d: anchor:[%1.4f %1.4f] \n', ...
+			  node.level,node.anchor(1),node.anchor(2));
+		end
+		coarsen(node)
+		set_node_values(node, values);
+		val = true;
+		return;
+	      end
+	    else
+		val = false;
+		return;
+	    end
+        else
+	  [refine_node, values] = fvisit(node,fsemilag,t(VNEXTSTEP));
+	  if refine_node
+	    % REFINE THE NODE
+	    if verbose,
+              mid = morton_id;
+              id = mid.id(node.level,node.anchor);
+              fprintf('--> refine node: ')
+              mid.print(id)
+              fprintf(' level %2d: anchor:[%1.4f %1.4f] \n', ...
+                      node.level,node.anchor(1),node.anchor(2));
             end
             refine(node);
             for kcnt=1:4, update_tree(node.kids{kcnt},fvisit); end;
             val = false;
-            return
-        end
-        % COARSEN THE NODE
-        if ~refine_node & kidsval & ~isempty(node.kids())
-            if verbose,
-                mid = morton_id;
-                id = mid.id(node.level,node.anchor);
-                fprintf('--> coarsen node: ')
-                mid.print(id)
-                fprintf(' level %2d: anchor:[%1.4f %1.4f] \n', ...
-                    node.level,node.anchor(1),node.anchor(2));
-            end
-            coarsen(node)
-            set_node_values(node, values);
             return;
-        end
-        % KEEP THE NODE AS IT IS
-        set_node_values(node, values);
+	  else
+	    set_node_values(node, values);
+	    val = true;
+	    return;
+	  end
+	end
+
+        % REFINE THE NODE
+        % if refine_node & isempty(node.kids())
+        %     if verbose,
+        %         mid = morton_id;
+        %         id = mid.id(node.level,node.anchor);
+        %         fprintf('--> refine node: ')
+        %         mid.print(id)
+        %         fprintf(' level %2d: anchor:[%1.4f %1.4f] \n', ...
+        %             node.level,node.anchor(1),node.anchor(2));
+        %     end
+        %     refine(node);
+        %     for kcnt=1:4, update_tree(node.kids{kcnt},fvisit); end;
+        %     val = false;
+        %     return
+        % end
+        % % COARSEN THE NODE
+        % if ~refine_node & kidsval & ~isempty(node.kids())
+        %     if verbose,
+        %         mid = morton_id;
+        %         id = mid.id(node.level,node.anchor);
+        %         fprintf('--> coarsen node: ')
+        %         mid.print(id)
+        %         fprintf(' level %2d: anchor:[%1.4f %1.4f] \n', ...
+        %             node.level,node.anchor(1),node.anchor(2));
+        %     end
+        %     coarsen(node)
+        %     set_node_values(node, values);
+        %     return;
+        % end
+        % % KEEP THE NODE AS IT IS
+        % set_node_values(node, values);
         
         function set_node_values(node, values)
             if verbose,
