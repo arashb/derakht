@@ -31,7 +31,7 @@ for tcnt = 1:nt
     utmptree.insert_function(fvelx,fdo_refine,t(tcnt));
     tree_data.init_data(utmptree,fvelx,resPerNode,t(tcnt));
     ucells{tcnt} = utmptree;
-    
+
     vtmptree = qtree;
     vtmptree.insert_function(fvely,fdo_refine,t(tcnt));
     tree_data.init_data(vtmptree,fvely,resPerNode,t(tcnt));
@@ -75,6 +75,7 @@ tic
 % SECOND METHOD: USE THE PREVIOUS TIME STEP TREE AS STARTING POINT
 %                REFINE/COARSEN WHENEVER IS NEEDED
 cnext = qtree.clone(c);
+%figure
 update_tree(cnext,fdo_refine);
 toc
 
@@ -82,44 +83,65 @@ if verbose
     plotvel();
 end
 
-    function coarsenme = update_tree(node, fvisit)
-        coarsenme = true;
-        coarsenkids = true;
+    function val = update_tree(node, fvisit)
+        %clf
+        %cnext.plottree(0.5);
+        %tree_data.plot_data(cnext)
+        %pause
+        val = true;
+        kidsval = true;
         if ~node.isleaf
             for k=1:4
                 kidval = update_tree(node.kids{k}, fvisit);
-                coarsenkids = coarsenkids & kidval;
+                kidsval = kidsval & kidval;
             end
-        end
-        [refine_node, values] = fvisit(node,fsemilag,t(VNEXTSTEP));
-        % REFINE THE NODE
-        if refine_node & isempty(node.kids())
+            if kidsval
+              [refine_node, values] = fvisit(node,fsemilag,t(VNEXTSTEP));
+              if refine_node
+                 val = false;
+                 return;
+              else
+                % COARSEN THE NODE
+                if verbose,
+                  mid = morton_id;
+                  id = mid.id(node.level,node.anchor);
+                  fprintf('--> coarsen node: ')
+                  mid.print(id)
+                  fprintf(' level %2d: anchor:[%1.4f %1.4f] \n', ...
+                          node.level,node.anchor(1),node.anchor(2));
+                end
+                coarsen(node)
+                set_node_values(node, values);
+                val = true;
+                return;
+              end
+            else
+                val = false;
+                return;
+            end
+        else
+          [refine_node, values] = fvisit(node,fsemilag,t(VNEXTSTEP));
+          if refine_node
+            % REFINE THE NODE
             if verbose,
-                mid = morton_id;
-                id = mid.id(node.level,node.anchor);
-                fprintf('--> refine node: ')
-                mid.print(id)
-                fprintf(' level %2d: anchor:[%1.4f %1.4f] \n', ...
-                    node.level,node.anchor(1),node.anchor(2));
+              mid = morton_id;
+              id = mid.id(node.level,node.anchor);
+              fprintf('--> refine node: ')
+              mid.print(id)
+              fprintf(' level %2d: anchor:[%1.4f %1.4f] \n', ...
+                      node.level,node.anchor(1),node.anchor(2));
             end
             refine(node);
             for kcnt=1:4, update_tree(node.kids{kcnt},fvisit); end;
-            coarsenme = false;
-            return
-            % COARSEN THE NODE
-        elseif coarsenkids
-            if verbose,
-                mid = morton_id;
-                id = mid.id(node.level,node.anchor);
-                fprintf('--> coarsen node: ')
-                mid.print(id)
-                fprintf(' level %2d: anchor:[%1.4f %1.4f] \n', ...
-                    node.level,node.anchor(1),node.anchor(2));
-            end
-            coarsen(node)
+            val = false;
+            return;
+          else
+            set_node_values(node, values);
+            val = true;
+            return;
+          end
         end
-        set_node_values(node, values);
-        
+
         function set_node_values(node, values)
             if verbose,
                 mid = morton_id;
@@ -153,7 +175,7 @@ end
     function ci = conc_interp(tq,xq,yq,zq)
         ci = tree_data.interp_points(c,xq,yq,zq);
         ci = conc_out(ci,xq,yq,zq);
-        
+
         function cq = conc_out(cq,xq,yq,zq)
             % OUTSIDE THE SIMULATION DOMAIN
             ce = fconc_exact(tq,xq,yq,zq);
@@ -168,7 +190,7 @@ end
         vval = tree_data.interp_points(vm,xq,yq,zq);
         [uq,vq,wq,] = interp_vel_temporal(uval,vval,0,t,tq,INTERP_TYPE);
         [uq,vq,wq] = vel_out(uq,vq,wq,xq,yq,zq);
-        
+
         function [uq,vq,wq] = vel_out(uq,vq,wq,xq,yq,zq)
             % OUTSIDE THE SIMULATION DOMAIN
             out = xq<0 | xq>1  | yq<0 | yq>1 | zq<0 | zq>1;
@@ -201,47 +223,47 @@ end
         c.plottree;
         tree_data.plot_data(c);
         title('c(t)');
-        
+
         subplot(3,4,3)
         cnext.plottree;
         tree_data.plot_data(cnext);
         title('c(t+dt)');
-        
+
         subplot(3,4,5)
         ucells{1}.plottree;
         tree_data.plot_data(ucells{1});
         title('u(t(n-1))');
-        
+
         subplot(3,4,6)
         ucells{2}.plottree;
         tree_data.plot_data(ucells{2});
         title('u(t(n))');
-        
+
         subplot(3,4,7)
         ucells{3}.plottree;
         tree_data.plot_data(ucells{3});
         title('u(t(n+1))');
-        
+
         subplot(3,4,8)
         ucells{4}.plottree;
         tree_data.plot_data(ucells{4});
         title('u(t(n+2))');
-        
+
         subplot(3,4,9)
         vcells{1}.plottree;
         tree_data.plot_data(vcells{1});
         title('v(t(n-1))');
-        
+
         subplot(3,4,10)
         vcells{2}.plottree;
         tree_data.plot_data(vcells{2});
         title('v(t(n))');
-        
+
         subplot(3,4,11)
         vcells{3}.plottree;
         tree_data.plot_data(vcells{3});
         title('v(t(n+1))');
-        
+
         subplot(3,4,12)
         vcells{4}.plottree;
         tree_data.plot_data(vcells{4});
