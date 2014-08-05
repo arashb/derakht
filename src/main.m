@@ -14,7 +14,7 @@ global maxLevel;
 global INTERP_TYPE;
 
 % RUN PARAMETERS
-maxErrorPerNode = 0.0001;        % Error per box
+maxErrorPerNode = 0.01;        % Error per box
 maxLevel        = 20;           % Maximum tree depth
 resPerNode      = 15;          % Resolution per Node
 verbose         = true;
@@ -52,7 +52,7 @@ VCURTSTEP   = 2;
 VNEXTSTEP   = 3;
 V2NEXTSTEP  = 4;
 t           = tinit + [-dt 0 dt 2*dt];
-tn          = 3;
+tn          = 1;
 
 fprintf('--> init tree depth: %d\n',cdepth);
 fprintf('--> cfl: %d\n',cfl);

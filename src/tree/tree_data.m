@@ -25,6 +25,7 @@ classdef tree_data < handle
             cleaves = tree.leaves();
             for lvcnt = 1:length(cleaves)
                 cleaf = cleaves{lvcnt};
+		if isempty(cleaf.data), continue; end;
                 % GRID POINTS
                 resPerNode = cleaf.data.resolution;
                 [xr,yr,zr,dx,dy,dz] = cleaf.mesh(resPerNode);
@@ -37,17 +38,25 @@ classdef tree_data < handle
         function [vv] = grid_data(tree)
             vv = [];
             cleaves = tree.leaves();
-            dim = cleaves{1}.data.dim;
+	    if isempty(cleaves{1}.data),
+	      dim=1;
+	    else
+	      dim = cleaves{1}.data.dim;
+	    end;
+            
             for dcnt = 1:dim
                 vvtmp = [];
                 for lvcnt = 1:length(cleaves)
                     cleaf = cleaves{lvcnt};                 
+		    if isempty(cleaf.data), continue; end;
                     % GRID VALUES                    
                     vals = cleaf.data.values;                                       
                     tmp = vals(:,:,:,dcnt);
                     vvtmp = [vvtmp; tmp(:)];
                 end
+                if ~isempty(vvtmp)
                 vv(:,dcnt) = vvtmp;
+                end
             end
         end
         
@@ -198,7 +207,9 @@ classdef tree_data < handle
             hold on
             [txx,tyy]   = tree_data.grid_points(tree);
             [tvv]       = tree_data.grid_data(tree);
-            scatter3(txx,tyy,tvv(:,dim),ones(size(txx)),tvv(:,dim),'filled')
+            if ~isempty(tvv) & ~isempty(txx) & ~isempty(tyy)
+                scatter3(txx,tyy,tvv(:,dim),ones(size(txx)),tvv(:,dim),'filled')
+            end
             %plot3(txx(:),tyy(:),tvv(:,dim),'.',MS,1)%,ones(size(txx)),tvv(:,dim),'filled')                        
             axis off; 
             axis equal;
