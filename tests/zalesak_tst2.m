@@ -1,4 +1,5 @@
-function main()
+function zalesak_tst2()
+% ZALESAK_TST2 check the adaptive refinement for the Zalesak test case
 clear; clear globals; % constants  and preamble
 addpath '../src/semilag'
 addpath '../src/tree'
@@ -49,7 +50,7 @@ axis off;
 %colorbar;
 title(['Zalesak disk - ', INTERP_TYPE, ' Interpolation' ]);
 
-s_fig_name = ['zalesak_',INTERP_TYPE,'_', num2str(maxLevel),'_', datestr(now) ];
+s_fig_name = ['zalesak_refinement_',INTERP_TYPE,'_', num2str(maxLevel),'_', datestr(now) ];
 saveas(f,s_fig_name,'pdf');
 
 %/* ************************************************** */

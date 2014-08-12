@@ -1,6 +1,6 @@
-%/* ************************************************** */ 
+%/* ************************************************** */
 %     Copyright 2014 Arash Bakhtiari
-%    
+%
 %     you may not use this file except in compliance with the License.
 %     You obtain a copy of the License in the LICENSE file
 %
@@ -12,11 +12,7 @@
 %/* ************************************************** */
 
 function [ cnew ] = semilag_2tl(xx,yy,zz,fconc,u,v,w,tstep,dt,INTERP_TYPE)
-
-% V2PREVTSTEP = 1;
-% VPREVTSTEP  = 2;
-% VCURTSTEP   = 3;
-% VNEXTSTEP   = 4;
+global dim;
 
 VPREVTSTEP  = 1;
 VCURTSTEP   = 2;
@@ -42,21 +38,21 @@ for k=1:fpicnt
     xxtmp = xx - xalpha*0.5;
     yytmp = yy - yalpha*0.5;
     zztmp = zz - zalpha*0.5;
-    
+
     ut = interp3(xx, yy, zz, umidpoint, xxtmp, yytmp, zztmp, INTERP_TYPE);
     vt = interp3(xx, yy, zz, vmidpoint, xxtmp, yytmp, zztmp, INTERP_TYPE);
     wt = interp3(xx, yy, zz, wmidpoint, xxtmp, yytmp, zztmp, INTERP_TYPE);
-    
+
     out = xxtmp<0 | xxtmp>1  | yytmp<0 | yytmp>1 | zztmp<0 | zztmp>1;
     % TODO
     [ue, ve, we] = vel_rot(0,xxtmp,yytmp,zztmp,0.5,0.5,0.5);
     ut(out) = -ue(out);
     vt(out) = -ve(out);
     wt(out) = -we(out);
-    
+
     xalpha = dt * ut;
     yalpha = dt * vt;
-    zalpha = dt * wt;    
+    zalpha = dt * wt;
 
 end
 xt = xx - xalpha;
@@ -65,4 +61,3 @@ zt = zz - zalpha;
 
 cnew = fconc(tstep,xt,yt,zt);
 end
-

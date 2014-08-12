@@ -29,7 +29,7 @@ assert(sum(sum(sum(isnan(c)))) == 0,'NaN found in initial concectration data.');
     function init_conc()
         switch CF_TYPE
             case 1, c  = gaussian( xx, yy, xc, yc, 0);
-            case 0, c = slotted_cylinder( xi, xf, xx, yy, zz, dx);
+            case 0, c = slotted_cylinder( xi, xf, xx, yy, zz);
         end
     end
 end

@@ -1,6 +1,5 @@
 function [ cnumsol ] = compute_numerical(cinit, xx, yy, zz, u, v, w, t, dt, tn, INTERP_TYPE, NUM_SCHEME)
-%COMPUTE_NUMERICAL 
-warning('off','all');
+%COMPUTE_NUMERICAL
 
 cnumsol = cinit;
 fprintf('computing numerical solution:\n');
@@ -27,7 +26,7 @@ end
     %/* ************************************************** */
     function ci = conc(t,xt,yt,zt)
         ci = interp_conc_spatial(cnumsol(:,:,:,tstep),xx,yy,zz,xt,yt,zt,INTERP_TYPE,@conc_out);
-        
+
         function cq = conc_out(cq,xq,yq,zq)
             out = xq<0 | xq>1  | yq<0 | yq>1 | zq<0 | zq>1;
             cq(out) = 0;
@@ -37,7 +36,7 @@ end
     %/* ************************************************** */
     function [uq,vq,wq] = vel_prec(tq,xq,yq,zq)
         [uq,vq,wq] = interp_vel_precomputed(xx,yy,zz,u,v,w,t,tq,xq,yq,zq,INTERP_TYPE,@vel_out);
-        
+
         function [uq,vq,wq] = vel_out(uq,vq,wq,xq,yq,zq)
             out = xq<0 | xq>1  | yq<0 | yq>1 | zq<0 | zq>1;
             [ue, ve, we] = vel_rot(tq,xq,yq,zq,0.5,0.5,0.5);
@@ -51,7 +50,7 @@ end
     function [uq,vq,wq] = vel(tq,xq,yq,zq)
         [ut, vt, wt] = interp_vel_temporal(u,v,w,t,tq,INTERP_TYPE);
         [uq, vq, wq] = interp_vel_spatial(xx,yy,zz,ut,vt,wt,xq,yq,zq,INTERP_TYPE,@vel_out);
-        
+
         function [uq,vq,wq] = vel_out(uq,vq,wq,xq,yq,zq)
             out = xq<0 | xq>1  | yq<0 | yq>1 | zq<0 | zq>1;
             [ue, ve, we] = vel_rot(tq,xq,yq,zq,0.5,0.5,0.5);
@@ -61,4 +60,3 @@ end
         end
     end
 end
-

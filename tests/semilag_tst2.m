@@ -3,18 +3,23 @@ function semilag_tst2()
 clear; close all;
 addpath('../src/common/');
 addpath('../src/semilag/');
+
 global dim;
 global gvfreq;
+global om;
 
 PLOT_SOL = 1;
 VF_TYPE = 1;                    % type of velocity field
 CF_TYPE = 1;                    % type of intial concentration field
+
 ERR_TYPE = 1;                   % type of error computation (L_2, L_inifinite, ...)
 RES_PATH = './';                % path to save results
 fig_format = '.pdf';
 INTERP_LIST = {'linear','cubic','spline'};
 INTERP_TYPE = INTERP_LIST{3};
 VFREQ_LIST = [5];
+
+om      = 1.0;
 
 xi      = 0;
 xf      = 1;
@@ -32,28 +37,26 @@ n = n_list(1);
 x = linspace(xi,xf,n+1);
 [xx, yy, zz] = meshgrid(x, x, 1:1);
 height = 1;%round(2*(n+1)/3);      % used for slicing the cylinder
+
 fprintf('*************************************\n');
 fprintf('interpolation type: %s\n',INTERP_TYPE);
 fprintf('ti: %d tf: %d\n',ti,tf);
 fprintf('n: %d\ndx: %d\ndt: %d\nvfreq: %d\n',n,dx,dt,gvfreq);
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% Init the fields
+
 t = [ti-dt, ti, ti+dt, ti+2*dt];
+
 [ u, v, w, cinit ] = init_fields(xi, xf, dx, xx, yy, zz, t, VF_TYPE, CF_TYPE);
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% (1) compute the analytical solution
-% TODO: extend for every possible velocity field
+
 csol = compute_analytical(xi, xf, ti, tf, xx, yy, zz, CF_TYPE);
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-% (2) compute solution using rk2 scheme
+
 crk2 = compute_numerical(cinit, xx, yy, zz, u, v, w, t, dt, tn, INTERP_TYPE, 'rk2');
 err = compute_error(crk2(3:end-2,3:end-2,1,end), csol(3:end-2,3:end-2,1), ERR_TYPE)
+
 %error_rk2(interptypecnt,ncnt,fcnt) = compute_error(crk2(3:end-2,3:end-2,3:end-2,end), csol(3:end-2,3:end-2,3:end-2), ERR_TYPE);
 %fprintf('rk2 error =  %e\n',error_rk2(interptypecnt,ncnt,fcnt));
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%(3) compute solution using 2tl scheme
-%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%c2tl = compute_numerical(cinit, xx, yy, zz, u, v, w, dt, tn, INTERP_TYPE, '2tl');
+
+c2tl = compute_numerical(cinit, xx, yy, zz, u, v, w, t, dt, tn, INTERP_TYPE, '2tl');
+
 %fprintf('2tl error =  %e\n',compute_error(c2tl(:,:,:,end), csol, ERR_TYPE));
 if PLOT_SOL
     solfig = figure;

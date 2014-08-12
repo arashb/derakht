@@ -7,6 +7,8 @@ addpath common
 global verbose;
 global gvfreq;
 global dim;
+global om;
+
 global DEBUG;
 global resPerNode;
 global maxErrorPerNode;
@@ -45,7 +47,7 @@ cdepth      = cinit.find_depth();
 cwidth      = 1/2^cdepth;
 dx          = cwidth/resPerNode;
 cfl         = 100;
-om          = 1;
+om          = 1.0;
 dt          = cfl*dx/om;
 VPREVTSTEP  = 1;
 VCURTSTEP   = 2;
@@ -65,34 +67,34 @@ for tstep =1:tn
     fprintf('======================================\n');
 
     cnext = advect_tree_semilag(c,fvelx,fvely,t,@do_refine,fconc_exact,@vel_exact);
-    
+
     plot_res(c,cnext);
-    
+
     c = cnext;
-    t = t + dt;    
+    t = t + dt;
 end
 
 % close(writerObj);
 
     % PLOT THE RESULTS
-    function plot_res(c, cnext)        
+    function plot_res(c, cnext)
         f = figure('Name','SEMI-LAG ADVECTION');
         subplot(1,2,1);
         c.plottree(0.5);
         tree_data.plot_data(c)
         colorbar;
         title(['tstep: ',num2str(tstep-1)]);
-        
+
         subplot(1,2,2);
         cnext.plottree(0.5);
         tree_data.plot_data(cnext);
         colorbar;
-        
+
         title(['tstep: ',num2str(tstep)]);
-        
+
 %         frame = getframe;
 %         writeVideo(writerObj,frame);
-        
+
         s_fig_name = ['results_',num2str(tstep)]; % ,datestr(now)
         saveas(f,s_fig_name,'pdf');
     end
@@ -191,7 +193,3 @@ end
 function v = vely_exact(t,x,y,z)
     [u,v,w] = vel_exact(t,x,y,z);
 end
-
-
-
-

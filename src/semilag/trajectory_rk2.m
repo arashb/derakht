@@ -1,6 +1,6 @@
-%/* ************************************************** */ 
+%/* ************************************************** */
 %     Copyright 2014 Arash Bakhtiari
-%    
+%
 %     you may not use this file except in compliance with the License.
 %     You obtain a copy of the License in the LICENSE file
 %
@@ -43,4 +43,3 @@ end
         zt = zi + dt*w2;
     end
 end
-

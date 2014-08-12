@@ -22,7 +22,7 @@ end
 % init the concentration
 switch CF_TYPE
     case 0
-        csol = slotted_cylinder( xi, xf, xxorigin, yyorigin, zzorigin, dx);
+        csol = slotted_cylinder( xi, xf, xxorigin, yyorigin, zzorigin);
     case 1
         csol = gaussian(xxorigin, yyorigin, xc, yc, 0);
 end
