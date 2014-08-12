@@ -2,6 +2,7 @@ function [uq, vq, wq] = interp_vel_temporal(u,v,w,t,tq,INTERP_TYPE)
 %INTERP_VEL_TEMPORAL Temporal interpolation of velocity values.
 %
 % tq is the time that velocity values are queried.
+warning('off', 'MATLAB:interp1:UsePCHIP') ;
 
 tn = size(t,2);
 tqn = size(tq,2);

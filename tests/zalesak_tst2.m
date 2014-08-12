@@ -1,8 +1,8 @@
 function main()
 clear; clear globals; % constants  and preamble
-addpath semilag
-addpath tree
-addpath common
+addpath '../src/semilag'
+addpath '../src/tree'
+addpath '../src/common'
 
 global verbose;
 global gvfreq;
@@ -15,7 +15,7 @@ global INTERP_TYPE;
 
 % RUN PARAMETERS
 maxErrorPerNode = 0.01;        % Error per box
-maxLevel        = 20;           % Maximum tree depth
+maxLevel        = 10;           % Maximum tree depth
 resPerNode      = 15;          % Resolution per Node
 verbose         = true;
 gvfreq          = 1;
@@ -27,7 +27,7 @@ INTERP_TYPE     = 'cubic';
 % open(writerObj);
 
 % MAIN SCRIPT
-fconc_exact   = @conc_exact_2;
+fconc_exact   = @conc_exact_3;
 fvelx   = @velx_exact;
 fvely   = @vely_exact;
 
@@ -38,69 +38,24 @@ fprintf('-> init the trees\n');
 cinit = qtree;
 tinit = 0;
 cinit.insert_function(fconc_exact,@do_refine,tinit);
-tree_data.init_data(cinit,fconc_exact,resPerNode,tinit);
+%tree_data.init_data(cinit,fconc_exact,resPerNode,tinit);
+cdepth      = cinit.find_depth()
 
-% SIMULATION PARAMETERS BASED ON INITIAL CCONC. TREE
-cdepth      = cinit.find_depth();
-cwidth      = 1/2^cdepth;
-dx          = cwidth/resPerNode;
-cfl         = 100;
-om          = 1;
-dt          = cfl*dx/om;
-VPREVTSTEP  = 1;
-VCURTSTEP   = 2;
-VNEXTSTEP   = 3;
-V2NEXTSTEP  = 4;
-t           = tinit + [-dt 0 dt 2*dt];
-tn          = 1;
+f = figure('Name','Zalesak Disk Test Case');
+cinit.plottree(0.5);
+axis equal;
+axis off;
+%tree_data.plot_data(cinit)
+%colorbar;
+title(['Zalesak disk - ', INTERP_TYPE, ' Interpolation' ]);
 
-fprintf('--> init tree depth: %d\n',cdepth);
-fprintf('--> cfl: %d\n',cfl);
-fprintf('--> dt: %d\n',dt);
-
-c = cinit;
-for tstep =1:tn
-    fprintf('======================================\n');
-    fprintf('time step: %d time: %f \n',tstep, t(VCURTSTEP));
-    fprintf('======================================\n');
-
-    cnext = advect_tree_semilag(c,fvelx,fvely,t,@do_refine,fconc_exact,@vel_exact);
-    
-    plot_res(c,cnext);
-    
-    c = cnext;
-    t = t + dt;    
-end
-
-% close(writerObj);
-
-    % PLOT THE RESULTS
-    function plot_res(c, cnext)        
-        f = figure('Name','SEMI-LAG ADVECTION');
-        subplot(1,2,1);
-        c.plottree(0.5);
-        tree_data.plot_data(c)
-        colorbar;
-        title(['tstep: ',num2str(tstep-1)]);
-        
-        subplot(1,2,2);
-        cnext.plottree(0.5);
-        tree_data.plot_data(cnext);
-        colorbar;
-        
-        title(['tstep: ',num2str(tstep)]);
-        
-%         frame = getframe;
-%         writeVideo(writerObj,frame);
-        
-        s_fig_name = ['results_',num2str(tstep)]; % ,datestr(now)
-        saveas(f,s_fig_name,'pdf');
-    end
+s_fig_name = ['zalesak_',INTERP_TYPE,'_', num2str(maxLevel),'_', datestr(now) ];
+saveas(f,s_fig_name,'pdf');
 
 %/* ************************************************** */
-    function [val, funcval] = do_refine(qtree,func,t)
-        [val, funcval] = tree_do_refine(qtree,func,maxErrorPerNode,maxLevel,resPerNode,t);
-    end
+function [val, funcval] = do_refine(qtree,func,t)
+  [val, funcval] = tree_do_refine(qtree,func,maxErrorPerNode,maxLevel,resPerNode,t);
+end
 
 end
 
@@ -191,7 +146,3 @@ end
 function v = vely_exact(t,x,y,z)
     [u,v,w] = vel_exact(t,x,y,z);
 end
-
-
-
-
