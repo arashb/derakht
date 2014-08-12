@@ -39,16 +39,23 @@ for k=1:fpicnt
     yytmp = yy - yalpha*0.5;
     zztmp = zz - zalpha*0.5;
 
-    ut = interp3(xx, yy, zz, umidpoint, xxtmp, yytmp, zztmp, INTERP_TYPE);
-    vt = interp3(xx, yy, zz, vmidpoint, xxtmp, yytmp, zztmp, INTERP_TYPE);
-    wt = interp3(xx, yy, zz, wmidpoint, xxtmp, yytmp, zztmp, INTERP_TYPE);
+    switch dim
+      case 3
+        ut = interp3(xx, yy, zz, umidpoint, xxtmp, yytmp, zztmp, INTERP_TYPE);
+        vt = interp3(xx, yy, zz, vmidpoint, xxtmp, yytmp, zztmp, INTERP_TYPE);
+        wt = interp3(xx, yy, zz, wmidpoint, xxtmp, yytmp, zztmp, INTERP_TYPE);
+      case 2
+        ut = interp2(xx, yy, umidpoint, xxtmp, yytmp, INTERP_TYPE);
+        vt = interp2(xx, yy, vmidpoint, xxtmp, yytmp, INTERP_TYPE);
+        wt = interp2(xx, yy, wmidpoint, xxtmp, yytmp, INTERP_TYPE);
+    end
 
     out = xxtmp<0 | xxtmp>1  | yytmp<0 | yytmp>1 | zztmp<0 | zztmp>1;
     % TODO
     [ue, ve, we] = vel_rot(0,xxtmp,yytmp,zztmp,0.5,0.5,0.5);
-    ut(out) = -ue(out);
-    vt(out) = -ve(out);
-    wt(out) = -we(out);
+    ut(out) = ue(out);
+    vt(out) = ve(out);
+    wt(out) = we(out);
 
     xalpha = dt * ut;
     yalpha = dt * vt;

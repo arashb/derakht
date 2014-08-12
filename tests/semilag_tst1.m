@@ -60,11 +60,13 @@ for ncnt =1:length(n_list)
     csol = compute_analytical(xi, xf, ti, tf, xx, yy, zz, CF_TYPE);
 
     crk2 = compute_numerical(cinit, xx, yy, zz, u, v, w, t, dt, tn, INTERP_TYPE, 'rk2');
-    error_rk2(interptypecnt,ncnt,fcnt) = compute_error(crk2(3:end-2,3:end-2,3:end-2,end), csol(3:end-2,3:end-2,3:end-2), ERR_TYPE);
+    error_rk2(interptypecnt,ncnt,fcnt) = compute_error(crk2(3:end-2,3:end-2,3:end-2,end), ...
+                                                       csol(3:end-2,3:end-2,3:end-2), ERR_TYPE);
     fprintf('rk2 error =  %e\n',error_rk2(interptypecnt,ncnt,fcnt));
 
     c2tl = compute_numerical(cinit, xx, yy, zz, u, v, w, ti, dt, tn, INTERP_TYPE, '2tl');
-    error_2tl(interptypecnt,ncnt,fcnt) = compute_error(c2tl(3:end-2,3:end-2,3:end-2,end), csol(3:end-2,3:end-2,3:end-2), ERR_TYPE);
+    error_2tl(interptypecnt,ncnt,fcnt) = compute_error(c2tl(3:end-2,3:end-2,3:end-2,end), ...
+                                                       csol(3:end-2,3:end-2,3:end-2), ERR_TYPE);
     fprintf('2tl error =  %e\n',error_2tl(interptypecnt,ncnt,fcnt));
 
 
