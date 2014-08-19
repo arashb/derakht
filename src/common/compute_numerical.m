@@ -1,5 +1,6 @@
 function [ cnumsol ] = compute_numerical(cinit, xx, yy, zz, u, v, w, t, dt, tn, INTERP_TYPE, NUM_SCHEME)
 %COMPUTE_NUMERICAL
+global DEBUG;
 
 cnumsol = cinit;
 fprintf('computing numerical solution:\n');
@@ -16,6 +17,7 @@ for tstep=1:tn
             error('Numerical scheme is unknown.');
     end
     assert(sum(sum(sum(isnan(cnumsol(:,:,:,tstep+1))))) == 0,'NaN found in solution data.');
+
     % get the velocity values for the next time step
     t = t + dt;
     for tcnt=1:length(t)

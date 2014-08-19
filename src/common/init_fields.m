@@ -1,15 +1,15 @@
 function [ u, v, w, c ] = init_fields(xi, xf, dx, xx, yy, zz, t, VF_TYPE, CF_TYPE)
-xc = (xf + xi) / 2;
-yc = xc;
-zc = xc;
-c = zeros(size(xx));
+xc  = (xf + xi)/2;
+yc  = xc;
+zc  = xc;
+c   = zeros(size(xx));
 
 % init the velocity values
 init_vel();
 % init the concentration values
 init_conc();
 assert(sum(sum(sum(isnan(c)))) == 0,'NaN found in initial concectration data.');
-    
+
     function init_vel()
         switch VF_TYPE
             case 1
@@ -28,9 +28,9 @@ assert(sum(sum(sum(isnan(c)))) == 0,'NaN found in initial concectration data.');
 
     function init_conc()
         switch CF_TYPE
-            case 1, c  = gaussian( xx, yy, xc, yc, 0);
+            case 2, c = cone(xx, yy);
+            case 1, c = gaussian(xx, yy);
             case 0, c = slotted_cylinder( xi, xf, xx, yy, zz);
         end
     end
 end
-

@@ -118,7 +118,7 @@ for interptypecnt=1:length(INTERP_LIST)
         freq = VFREQ_LIST(fcnt);
         % create and save the error graph
         figure(f)
-        h = semilogy(n_level,error_rk2(interptypecnt,:,fcnt));
+        h = loglog(1./n_list,error_rk2(interptypecnt,:,fcnt));
         mi = mod(cmapcnt,length(m)) + 1;
         set(h, 'Marker', m{mi});
         lsi = mod(cmapcnt,length(ls)) + 1;
@@ -129,7 +129,7 @@ for interptypecnt=1:length(INTERP_LIST)
         mes = sprintf('rk2-%s-vfreq%d',INTERP_LIST{interptypecnt},freq);
         legendInfo{end+1}= mes;
         hold on;
-        i = semilogy(n_level,error_2tl(interptypecnt,:,fcnt));
+        i = loglog(1./n_list,error_2tl(interptypecnt,:,fcnt));
         mi = mod(cmapcnt,length(m)) + 1;
         set(i, 'Marker', m{mi});
         lsi = mod(cmapcnt,length(ls)) + 1;

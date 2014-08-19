@@ -1,5 +1,5 @@
 function [] = zalesak_tst1()
-% ZALESAK_TST1 check the semi-Lagrangian interpolation accurcy for the Zalesak test case
+% ZALESAK_TST1 check the semi-Lagrangian interpolation accuracy for the Zalesak test case
 clear; close all;
 clear global;
 
