@@ -5,6 +5,8 @@ addpath('../src/common/');
 addpath('../src/tree/');
 global verbose;
 global gvfreq;
+global om;
+
 
 % RUN PARAMETERS
 maxErrorPerNode = 0.001;      % Error per box
@@ -12,7 +14,7 @@ maxLevel        = 20;          % maximum tree depth
 verbose         = false;
 resPerNode      = 10;
 gvfreq          = 1;
-
+om              = 1;
 % MAIN SCRIPT
 
 % plot the function

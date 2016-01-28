@@ -1,93 +1,149 @@
-function [] = zalesak_tst1()
-% ZALESAK_TST1 check the semi-Lagrangian interpolation accuracy for the Zalesak test case
-clear; close all;
-clear global;
+function zalesak_tst1()
+% ZALESAK_TST2 check the adaptive refinement for the Zalesak test case
+clear; clear globals; % constants  and preamble
+addpath '../src/semilag'
+addpath '../src/tree'
+addpath '../src/common'
 
-addpath('../src/common/');
-addpath('../src/semilag/');
-
-VF_TYPE     = 1;                    % type of velocity field
-CF_TYPE     = 0;                    % type of intial concentration field: 0:Zalesak cylinder 1:Gaussian  
-ERR_TYPE    = 1;                    % type of error computation (L_2, L_inifinite, ...)
-
-PLOT_SOL    = 1;
-RES_PATH    = './';                % path to save results
-fig_format  = '.pdf';
-
-%INTERP_LIST = {'linear','cubic','spline'};
-INTERP_LIST = {'spline'};
-
-
-global gvfreq;
-global om;
-global dim;
 global verbose;
+global gvfreq;
+global dim;
+global DEBUG;
+global resPerNode;
+global maxErrorPerNode;
+global maxLevel;
+global INTERP_TYPE;
 
-gvfreq  = 0;
-dim     = 2;
-verbose = false;
-om      = 1.0;
+% RUN PARAMETERS
+maxErrorPerNode = 0.01;        % Error per box
+maxLevel        = 10;           % Maximum tree depth
+resPerNode      = 15;          % Resolution per Node
+verbose         = true;
+gvfreq          = 1;
+dim             = 2;
+DEBUG           = false;
+INTERP_TYPE     = 'cubic';
 
-n_level = [4];
-n_list  = 2.^n_level;
-cfl     = 1.0;
+% writerObj = VideoWriter('movie.avi');
+% open(writerObj);
 
-% spatial domain
-xi      = 0.0;
-xf      = 1.0;
-dx      = (xf - xi)/n_list(1)
+% MAIN SCRIPT
+fconc_exact   = @conc_exact_3;
+fvelx   = @velx_exact;
+fvely   = @vely_exact;
 
-% temporal domain
-ti      = 0.0;
-tf      = 2*pi;
-dt      = cfl*dx/om;
-tn      = tf/dt;
-%tn      = 10;
-%tf      = tn*dt;
+% CONSTRUCT AND INIT THE TREES VALUES
+fprintf('-> init the trees\n');
 
-fcnt = 1;
-ncnt = 1;
+% CONCENTRATION
+cinit = qtree;
+tinit = 0;
+cinit.insert_function(fconc_exact,@do_refine,tinit);
+%tree_data.init_data(cinit,fconc_exact,resPerNode,tinit);
+cdepth      = cinit.find_depth()
 
-n = n_list(1);
-
-fprintf('*************** Simulation Data **********************\n');
-fprintf('ti: %d\n tf: %d\n',ti,tf);
-fprintf('n: %d\ndx: %d\ndt: %d\n',n,dx,dt);
-fprintf('*************************************\n');
-
-x = linspace(xi,xf,n+1);
-[xx, yy, zz] = meshgrid(x, x, 1:1);
-height = 1;      % used for slicing the cylinder
-
-t = [ti-dt, ti, ti+dt, ti+2*dt];
-[ u, v, w, cinit ] = init_fields(xi, xf, dx, xx, yy, zz, t, VF_TYPE, CF_TYPE);
-
-color_spec = {'r','g','b','c'};
-legendInfo{1} = 'initial';
-
-f = figure('Name','Zalesak Disk','units','normalized','outerposition',[0 0 1 1]);
-contour(cinit(:,:,height),1,'k');
-hold on
+f = figure('Name','Zalesak Disk Test Case');
+cinit.plottree(0.5);
+axis equal;
 axis off;
-%axis equal;
+%tree_data.plot_data(cinit)
+%colorbar;
+title(['Zalesak disk - ', INTERP_TYPE, ' Interpolation' ]);
 
-for interptypecnt=1:length(INTERP_LIST)
-    INTERP_TYPE = INTERP_LIST{interptypecnt};
-    fprintf('*************************************\n');
-    fprintf('interpolation type: %s\n',INTERP_TYPE);
+s_fig_name = ['zalesak_refinement_',INTERP_TYPE,'_', num2str(maxLevel),'_', datestr(now) ];
+saveas(f,s_fig_name,'pdf');
 
-    crk2 = compute_numerical(cinit, xx, yy, zz, u, v, w, t, dt, tn, INTERP_TYPE, 'rk2');
-    %c2tl = compute_numerical(cinit, xx, yy, zz, u, v, w, t, dt, tn, INTERP_TYPE, '2tl');
-
-    contour(crk2(:,:,height,end),1,color_spec{interptypecnt});
-    legendInfo{end+1} = [['rk2-'],INTERP_TYPE];
+%/* ************************************************** */
+function [val, funcval] = do_refine(qtree,func,t)
+  [val, funcval] = tree_do_refine(qtree,func,maxErrorPerNode,maxLevel,resPerNode,t);
 end
-legend(legendInfo);
-%shg
-fig_format = '.pdf';
-fig_path   = './';
-s_fig_name = ['zalesak_disk_cmpr_',datestr(now)];
-s_fig_path = [fig_path,s_fig_name,fig_format];
-saveas(f,s_fig_path);
 
+end
+
+%/* ************************************************** */
+function value = conc_exact_1(t,x,y,z)
+xc = 0.5;
+yc = 0.5;
+om = 1;
+theta = -om*t;
+sigmax = 0.05;
+sigmay = 0.12;
+value = gaussian(x,y,xc,yc,theta, sigmax, sigmay);
+end
+
+%/* ************************************************** */
+function value = conc_exact_2(t,x,y,z)
+xc = 0.5;
+yc = 0.5;
+xci = 0.625;
+yci = 0.375;
+om = 1;
+
+[alpha,RHO] = cart2pol(xci-xc,yci-xc);
+alphat = alpha + t*om;
+
+[xct,yct] = pol2cart(alphat,RHO);
+xct = xct + xc;
+yct = yct + yc;
+
+theta = 0;
+sigmax = 0.05;
+sigmay = 0.05;
+value = gaussian(x,y,xct,yct,theta,sigmax,sigmay);
+end
+
+%/* ************************************************** */
+function value = conc_exact_22(t,x,y,z)
+xc = 0.5;
+yc = 0.5;
+theta = 0;
+sigmax = 0.05;
+sigmay = 0.05;
+om = 1;
+
+xc1 = 0.75;
+yc1 = 0.75;
+[alpha1,RHO1] = cart2pol(xc1-xc,yc1-xc);
+alphat1 = alpha1 + t*om;
+[xct,yct] = pol2cart(alphat1,RHO1);
+xct = xct + xc;
+yct = yct + yc;
+value1 = gaussian(x,y,xct,yct,theta,sigmax,sigmay);
+
+xc2 = 0.25;
+yc2 = 0.25;
+[alpha2,RHO2] = cart2pol(xc2-xc,yc2-xc);
+alphat2 = alpha2 + t*om;
+[xct,yct] = pol2cart(alphat2,RHO2);
+xct = xct + xc;
+yct = yct + yc;
+value2 = gaussian(x,y,xct,yct,theta,sigmax,sigmay);
+
+value = value1 + value2;
+
+end
+
+%/* ************************************************** */
+function value = conc_exact_3(t,x,y,z)
+xi = 0;
+xf = 1;
+value = zalesak(x, y);
+end
+
+%/* ************************************************** */
+function [u,v,w] = vel_exact(t,x,y,z)
+    xc = 0.5;
+    yc = 0.5;
+    zc = 0.5;
+    [u,v,w] = vel_rot(0,x,y,z,xc,yc,zc);
+end
+
+%/* ************************************************** */
+function u = velx_exact(t,x,y,z)
+    [u,v,w] = vel_exact(t,x,y,z);
+end
+
+%/* ************************************************** */
+function v = vely_exact(t,x,y,z)
+    [u,v,w] = vel_exact(t,x,y,z);
 end

@@ -127,7 +127,7 @@ classdef tree_data < handle
         end
         
         %/* ************************************************** */
-        function val = interp_points(src_tree,xq,yq,zq)
+        function val = interp_points(src_tree,xq,yq,zq,INTERP_TYPE)
             src_leaves  = src_tree.leaves();
             resPerNode  = src_leaves{1}.data.resolution;
             data_dim    = src_leaves{1}.data.dim;
@@ -149,11 +149,41 @@ classdef tree_data < handle
                     [src_xxr,src_yyr,src_zzr,src_dx,src_dy,src_dz] = src_leaf.mesh(resPerNode);
                     
                     interp_data = src_leaf.data.values(:,:,:,dimcnt);
-                    vv = interp2(src_xxr,src_yyr,interp_data,xx,yy);
+                    vv = interp2(src_xxr,src_yyr,interp_data,xx,yy,INTERP_TYPE);
                     tmpval(indices) = vv;
                 end
                 val(:,:,:,dimcnt) = tmpval;
             end
+        end
+        
+        %/* ************************************************** */
+        function max_err = compute_error(tree,fexact, t,INTERP_TYPE)
+            leaves  = tree.leaves();
+            resPerNode  = leaves{1}.data.resolution;
+            data_dim    = leaves{1}.data.dim;
+            max_err = 0;
+            %for dimcnt = 1:data_dim
+                for lvcnt =1:length(leaves)
+                    leaf = leaves{lvcnt};
+                    [xr,yr,zr,dx,dy,dz] = leaf.mesh(resPerNode);
+                    
+                    % compute the center of the local grid cells
+                    xxc = xr+dx/2;
+                    yyc = yr+dy/2;
+                    zzc = zr+dz/2;
+                    xxcc = xxc(1:end-1,1:end-1);
+                    yycc = yyc(1:end-1,1:end-1);
+                    zzcc = zzc(1:end-1,1:end-1);
+                    
+                    vale = fexact(t,xxcc,yycc,zzcc);
+                    
+                    valt = tree_data.interp_points(leaf,xxcc,yycc,zzcc,INTERP_TYPE);% leaf.data.values(:,:,:,dimcnt);
+                    % compute interpolation error
+                    diff = vale - valt;
+                    err = max(max(abs(diff)));
+                    if err > max_err, max_err = err; end;
+                end
+            %end
         end
         
         %/* ************************************************** */

@@ -21,7 +21,7 @@ V2NEXTSTEP  = 4;
 
 ti = t(VNEXTSTEP);
 tf = t(VCURTSTEP);
-n  = 10;
+n  = 1;
 
 [xt,yt,zt] = trajectory_rk2(xx,yy,zz,fvel_interp,ti,tf,n);
 cnew = fconc_interp(t(VCURTSTEP),xt,yt,zt);

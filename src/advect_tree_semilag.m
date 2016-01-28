@@ -11,7 +11,7 @@
 %     limitations under the License.
 %/* ************************************************** */
 
-function cnext = advect_tree_semilag(c,fvelx,fvely,t,fdo_refine,fconc_exact,fvel_exact)
+function cnext = advect_tree_semilag(c,u,v,t,fdo_refine,fconc_exact,fvel_exact)
 global resPerNode;
 global verbose;
 global INTERP_TYPE;
@@ -21,51 +21,56 @@ VCURTSTEP   = 2;
 VNEXTSTEP   = 3;
 V2NEXTSTEP  = 4;
 
-% VELOCITY (TIME-DEPENDENT)
-nt = length(t);
-ucells = cell(1,nt);
-vcells = cell(1,nt);
+% % VELOCITY (TIME-DEPENDENT)
+% nt = length(t);
+% ucells = cell(1,nt);
+% vcells = cell(1,nt);
+% 
+% for tcnt = 1:nt
+%     utmptree = qtree;
+%     utmptree.insert_function(fvelx,fdo_refine,t(tcnt));
+%     tree_data.init_data(utmptree,fvelx,resPerNode,t(tcnt));
+%     ucells{tcnt} = utmptree;
+% 
+%     vtmptree = qtree;
+%     vtmptree.insert_function(fvely,fdo_refine,t(tcnt));
+%     tree_data.init_data(vtmptree,fvely,resPerNode,t(tcnt));
+%     vcells{tcnt} = vtmptree;
+% end
+% 
+% % MERGE VELOCITY TREES
+% fprintf('-> merge velocity trees\n');
+% num     = size(ucells,2);
+% um_tree = merge(ucells);
+% umcells = clone(um_tree,num);
+% vm_tree = merge(vcells);
+% vmcells = clone(vm_tree,num);
+% 
+% % INTERPOLATE VELOCITY VALUES ON THE MERGED TREES
+% fprintf('-> interpolate velocity values on the merged tree\n');
+% for i =1:num
+%     tree_data.interp(ucells{i}, umcells{i});
+%     tree_data.interp(vcells{i}, vmcells{i});
+% end
+% 
+% u = tree_data.collapse(umcells);
+% v = tree_data.collapse(vmcells);
 
-for tcnt = 1:nt
-    utmptree = qtree;
-    utmptree.insert_function(fvelx,fdo_refine,t(tcnt));
-    tree_data.init_data(utmptree,fvelx,resPerNode,t(tcnt));
-    ucells{tcnt} = utmptree;
-
-    vtmptree = qtree;
-    vtmptree.insert_function(fvely,fdo_refine,t(tcnt));
-    tree_data.init_data(vtmptree,fvely,resPerNode,t(tcnt));
-    vcells{tcnt} = vtmptree;
-end
-
-% MERGE VELOCITY TREES
-fprintf('-> merge velocity trees\n');
-num     = size(ucells,2);
-um_tree = merge(ucells);
-umcells = clone(um_tree,num);
-vm_tree = merge(vcells);
-vmcells = clone(vm_tree,num);
-
-% INTERPOLATE VELOCITY VALUES ON THE MERGED TREES
-fprintf('-> interpolate velocity values on the merged tree\n');
-for i =1:num
-    tree_data.interp(ucells{i}, umcells{i});
-    tree_data.interp(vcells{i}, vmcells{i});
-end
-
-um = tree_data.collapse(umcells);
-vm = tree_data.collapse(vmcells);
-
+    
 % ADVECT
-fprintf('-> performing one step semi-lagrangian\n');
-%fconc_interp    = @conc_exact;
+fprintf('-> compute SL\n');
+
+%fconc_interp    = fconc_exact;
 fconc_interp    = @conc_interp;
-%fvel_interp     = @vel_exact;
-fvel_interp     = @vel_interp;
+
+%fvel_interp     = fvel_exact;
+%fvel_interp     = @vel_interp;
+fvel_interp     = @vel_interp_time_independent;
+
 %fsemilag        = fconc_exact;
 fsemilag        = @semilag;
 
-tic
+
 % FIRST METHOD: CONSTRUCT THE NEXT TIME STEP TREE FROM SCRATCH WITH
 %               SEMILAG SOLVER AS REFINEMENT FUNCTION
 % cnext = qtree;
@@ -75,19 +80,13 @@ tic
 % SECOND METHOD: USE THE PREVIOUS TIME STEP TREE AS STARTING POINT
 %                REFINE/COARSEN WHENEVER IS NEEDED
 cnext = qtree.clone(c);
-%figure
 update_tree(cnext,fdo_refine);
-toc
 
-if verbose
-    plotvel();
-end
+% if verbose
+%     plotvel();
+% end
 
     function val = update_tree(node, fvisit)
-        %clf
-        %cnext.plottree(0.5);
-        %tree_data.plot_data(cnext)
-        %pause
         val = true;
         kidsval = true;
         if ~node.isleaf
@@ -153,7 +152,7 @@ end
             end
             node.data.dim           = 1;
             node.data.resolution    = resPerNode;
-            node.data.values = values;
+            node.data.values        = values;
         end
     end
 
@@ -173,12 +172,13 @@ end
 
 %/* ************************************************** */
     function ci = conc_interp(tq,xq,yq,zq)
-        ci = tree_data.interp_points(c,xq,yq,zq);
+        ci = tree_data.interp_points(c,xq,yq,zq,INTERP_TYPE);
         ci = conc_out(ci,xq,yq,zq);
 
         function cq = conc_out(cq,xq,yq,zq)
             % OUTSIDE THE SIMULATION DOMAIN
-            ce = fconc_exact(tq,xq,yq,zq);
+            %ce = fconc_exact(tq,xq,yq,zq);
+            ce = zeros(size(cq));
             out = xq<0 | xq>1  | yq<0 | yq>1 | zq<0 | zq>1;
             cq(out) = ce(out);
         end
@@ -186,9 +186,32 @@ end
 
 %/* ************************************************** */
     function [uq,vq,wq] = vel_interp(tq,xq,yq,zq)
-        uval = tree_data.interp_points(um,xq,yq,zq);
-        vval = tree_data.interp_points(vm,xq,yq,zq);
+        uval = tree_data.interp_points(u,xq,yq,zq);
+        vval = tree_data.interp_points(v,xq,yq,zq);
         [uq,vq,wq,] = interp_vel_temporal(uval,vval,0,t,tq,INTERP_TYPE);
+        [uq,vq,wq] = vel_out(uq,vq,wq,xq,yq,zq);
+
+        function [uq,vq,wq] = vel_out(uq,vq,wq,xq,yq,zq)
+            % OUTSIDE THE SIMULATION DOMAIN
+            out = xq<0 | xq>1  | yq<0 | yq>1 | zq<0 | zq>1;
+%             [ue, ve, we] = fvel_exact(tq,xq,vq,zq);
+%             uq(out) = ue(out);
+%             vq(out) = ve(out);
+%             wq(out) = we(out);
+            ue = zeros(size(uq));
+            uq(out) = ue(out);
+            vq(out) = ue(out);
+            wq(out) = ue(out);
+        end
+    end
+
+%/* ************************************************** */
+    function [uq,vq,wq] = vel_interp_time_independent(tq,xq,yq,zq)
+        uval = tree_data.interp_points(u,xq,yq,zq,INTERP_TYPE);
+        vval = tree_data.interp_points(v,xq,yq,zq,INTERP_TYPE);
+        uq = uval;
+        vq = vval;
+        wq = zeros(size(uq));
         [uq,vq,wq] = vel_out(uq,vq,wq,xq,yq,zq);
 
         function [uq,vq,wq] = vel_out(uq,vq,wq,xq,yq,zq)
