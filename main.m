@@ -50,7 +50,7 @@ for lvl =1:size(max_level_list,2)
     % TEMPORAL RESOLUTION
     T_INIT   = 0;
     T_FINAL  = 2*pi;
-    tn       = tn*2;
+    tn       = tn_init*2^(lvl-1);
     dt       = T_FINAL/tn;
     t        = T_INIT + [-dt 0 dt 2*dt];
     
@@ -85,6 +85,9 @@ for lvl =1:size(max_level_list,2)
     err(1,1)= 0;
     err(1,2)= tree_data.compute_error(cinit, fconc_exact, T_INIT, INTERP_TYPE);
     
+    fprintf('DEPTH: %3d    Q: %3d   TN:%3d   DT:%8.2e\n', maxLevel, resPerNode, tn, dt);
+    fprintf('INPUT ERROR: %12.2e\n', err(1,2));
+    
     c = cinit;
     for tstep =1:tn
         fprintf('======================================\n');
@@ -111,6 +114,7 @@ for lvl =1:size(max_level_list,2)
     
     % SAVE THE ERROR
     fileID = fopen([dir_name,'error.txt'],'w');
+    fprintf(fileID,'# DEPTH: %3d    Q: %3d   TN:%3d   DT:%8.2e\n', maxLevel, resPerNode, tn, dt);
     fprintf(fileID,'%6s %12s\n','tn','LINF');
     fprintf(fileID,'%6d %12.2e\n',err');
     fclose(fileID);
