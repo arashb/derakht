@@ -33,33 +33,33 @@ fdo_refine    = @do_refine;         % refinement criterion
 
 % SIMULATION PARAMETERS BASED ON INITIAL CCONC. TREE
 max_level_list = [2];% 3];% 4 5 6];
-tn      = 50;
+tn_init      = 1;
 for lvl =1:size(max_level_list,2)
-    
-    % SIMULATION PARAMETERS
-    maxErrorPerNode = 1e-30;                             % Error per box
-    maxLevel        = max_level_list(lvl);               % Maximum tree depth
-    resPerNode      = 7;                                % Resolution per Node
-    verbose         = false;
-    gvfreq          = 0;
-    om              = 1;
-    dim             = 2;
-    DEBUG           = false;
-    INTERP_TYPE     = 'cubic';
-    
-    % TEMPORAL RESOLUTION
-    T_INIT   = 0;
-    T_FINAL  = 2*pi;
-    tn       = tn_init*2^(lvl-1);
-    dt       = T_FINAL/tn;
-    t        = T_INIT + [-dt 0 dt 2*dt];
-    
-    fprintf('--> dt: %d\n',dt);
     
     % OUTPUT FOLDER
     timestamp = datestr(now,30);
     dir_name = ['./results/res_',timestamp,'/'];
     mkdir(dir_name);
+    
+    diary([dir_name 'diary.txt']);
+    
+    % SIMULATION PARAMETERS
+    maxErrorPerNode = 1e-30                             % Error per box
+    maxLevel        = max_level_list(lvl)               % Maximum tree depth
+    resPerNode      = 7                                 % Resolution per Node
+    verbose         = false
+    gvfreq          = 0
+    om              = 1
+    dim             = 2
+    DEBUG           = false
+    INTERP_TYPE     = 'cubic'
+    
+    % TEMPORAL RESOLUTION
+    T_INIT   = 0
+    T_FINAL  = 2*pi
+    tn       = tn_init*2^(lvl-1)
+    dt       = T_FINAL/tn
+    t        = T_INIT + [-dt 0 dt 2*dt];
     
     % CONSTRUCT AND INIT THE TREES (VELOCITY AND CONCENTRAITION FEILDS)
     fprintf('-> init the trees\n');
@@ -118,6 +118,8 @@ for lvl =1:size(max_level_list,2)
     fprintf(fileID,'%6s %12s\n','tn','LINF');
     fprintf(fileID,'%6d %12.2e\n',err');
     fclose(fileID);
+    
+    diary off;
 end
 
 % PLOT THE RESULTS
