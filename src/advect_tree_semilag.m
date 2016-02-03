@@ -84,11 +84,19 @@ fsemilag        = @semilag;
 
 % THIRD METHOD: SEPARATE THE COMPUTATION AND REFINEMENT SECTIONS
 cnext = qtree.clone(c);
-tree_data.init_data(cnext,fsemilag,resPerNode);
-%refine_tree(cnext, fdo_refine_modified)
 
-    function val = refine_tree(node, fvisit)
-        val = true;
+fprintf('Compute SL\n');
+sl_time = tic;
+tree_data.init_data(cnext,fsemilag,resPerNode);
+toc(sl_time)
+
+fprintf('Refine tree\n');
+rt_time = tic;
+refine_tree(cnext, fdo_refine);
+toc(rt_time)
+
+    function do_coarsen = refine_tree(node, fvisit)
+        do_coarsen = true;
         kidsval = true;
         if ~node.isleaf
             for k=1:4
@@ -96,58 +104,58 @@ tree_data.init_data(cnext,fsemilag,resPerNode);
                 kidsval = kidsval & kidval;
             end
             if kidsval
-                [refine_node, values] = fvisit(node,fsemilag,t(VNEXTSTEP));
-                if refine_node
-                    val = false;
-                    return;
+                [refine_node] = fvisit(node,fsemilag,t(VNEXTSTEP));
+                if refine_node, do_coarsen = false; return;
                 else
-                    % COARSEN THE NODE
+                    % COARSEN NODE
                     if verbose,
-                        mid = morton_id;
-                        id = mid.id(node.level,node.anchor);
+                        %mid = morton_id;
+                        %id = mid.id(node.level,node.anchor);
                         fprintf('--> coarsen node: ')
-                        mid.print(id)
+                        %mid.print(id)
                         fprintf(' level %2d: anchor:[%1.4f %1.4f] \n', ...
                             node.level,node.anchor(1),node.anchor(2));
                     end
                     coarsen(node)
-                    set_node_values(node, values);
-                    val = true;
+                    set_node_values(node);
+                    %do_coarsen = true;
+                    do_coarsen = false;
                     return;
                 end
-            else
-                val = false;
-                return;
+            else do_coarsen = false; return;
             end
         else
-            [refine_node, values] = fvisit(node,fsemilag,t(VNEXTSTEP));
+            [refine_node] = fvisit(node,fsemilag,t(VNEXTSTEP));
             if refine_node
-                % REFINE THE NODE
+                % REFINE NODE
                 if verbose,
-                    mid = morton_id;
-                    id = mid.id(node.level,node.anchor);
+                    %mid = morton_id;
+                    %id = mid.id(node.level,node.anchor);
                     fprintf('--> refine node: ')
-                    mid.print(id)
+                    %mid.print(id)
                     fprintf(' level %2d: anchor:[%1.4f %1.4f] \n', ...
                         node.level,node.anchor(1),node.anchor(2));
                 end
                 refine(node);
                 for kcnt=1:4, refine_tree(node.kids{kcnt},fvisit); end;
-                val = false;
+                do_coarsen = false;
                 return;
             else
-                set_node_values(node, values);
-                val = true;
+                set_node_values(node);
+                do_coarsen = true;
                 return;
             end
         end
         
-        function set_node_values(node, values)
+        function set_node_values(node)
+            [xxr,yyr,zzr,dx,dy,dz] = node.mesh(resPerNode);
+            % compute the function values on the local grid points
+            values = fsemilag(t,xxr,yyr,zzr);
             if verbose,
-                mid = morton_id;
-                id = mid.id(node.level,node.anchor);
+                %mid = morton_id;
+                %id = mid.id(node.level,node.anchor);
                 fprintf('--> set semilag values for node: ')
-                mid.print(id)
+                %mid.print(id)
                 fprintf(' level %2d: anchor:[%1.4f %1.4f] \n', ...
                     node.level,node.anchor(1),node.anchor(2));
             end
@@ -214,10 +222,10 @@ tree_data.init_data(cnext,fsemilag,resPerNode);
 
         function set_node_values(node, values)
             if verbose,
-                mid = morton_id;
-                id = mid.id(node.level,node.anchor);
+                %mid = morton_id;
+                %id = mid.id(node.level,node.anchor);
                 fprintf('--> set semilag values for node: ')
-                mid.print(id)
+                %mid.print(id)
                 fprintf(' level %2d: anchor:[%1.4f %1.4f] \n', ...
                     node.level,node.anchor(1),node.anchor(2));
             end

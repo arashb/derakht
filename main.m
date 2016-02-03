@@ -32,8 +32,9 @@ fvely_exact   = @get_vely_exact;
 %fdo_refine    = @do_refine;         % refinement criterion
 fdo_refine    = @do_refine_modified;         % refinement criterion
 
-max_level_list = [5];% 3];% 4 5 6];
-tn_init      = 200;
+% SIMULATION PARAMETERS BASED ON INITIAL CCONC. TREE
+max_level_list = [2, 3];% 4 5 6];
+tn_init      = 100;
 for lvl =1:size(max_level_list,2)
     
     % OUTPUT FOLDER
@@ -93,9 +94,9 @@ for lvl =1:size(max_level_list,2)
         fprintf('======================================\n');
         
         % ONE STEP SL ADVECTION
-        tic;
+        ts_time = tic;
         cnext = advect_tree_semilag(c,u,v,t,fdo_refine,fconc_exact,fvel_exact);
-        toc
+        toc(ts_time)
         
         % PLOT THE RESULT
         plot_tree(cnext,tstep);

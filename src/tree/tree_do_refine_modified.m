@@ -21,7 +21,11 @@ global INTERP_TYPE;
 [xxr,yyr,zzr,dx,dy,dz] = qtree.mesh(resPerNode);
 
 % get local grid points values
-fre = qtree.data.values;
+if ~isempty(qtree.data),
+    fre = qtree.data.values;
+else
+    fre = func(t,xxr,yyr,zzr);
+end
 
 % compute the center of the local grid cells
 xxc = xxr+dx/2;
