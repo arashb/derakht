@@ -79,12 +79,83 @@ fsemilag        = @semilag;
 
 % SECOND METHOD: USE THE PREVIOUS TIME STEP TREE AS STARTING POINT
 %                REFINE/COARSEN WHENEVER IS NEEDED
-cnext = qtree.clone(c);
-update_tree(cnext,fdo_refine);
+% cnext = qtree.clone(c);
+% update_tree(cnext,fdo_refine);
 
-% if verbose
-%     plotvel();
-% end
+% THIRD METHOD: SEPARATE THE COMPUTATION AND REFINEMENT SECTIONS
+cnext = qtree.clone(c);
+tree_data.init_data(cnext,fsemilag,resPerNode);
+%refine_tree(cnext, fdo_refine_modified)
+
+    function val = refine_tree(node, fvisit)
+        val = true;
+        kidsval = true;
+        if ~node.isleaf
+            for k=1:4
+                kidval = refine_tree(node.kids{k}, fvisit);
+                kidsval = kidsval & kidval;
+            end
+            if kidsval
+                [refine_node, values] = fvisit(node,fsemilag,t(VNEXTSTEP));
+                if refine_node
+                    val = false;
+                    return;
+                else
+                    % COARSEN THE NODE
+                    if verbose,
+                        mid = morton_id;
+                        id = mid.id(node.level,node.anchor);
+                        fprintf('--> coarsen node: ')
+                        mid.print(id)
+                        fprintf(' level %2d: anchor:[%1.4f %1.4f] \n', ...
+                            node.level,node.anchor(1),node.anchor(2));
+                    end
+                    coarsen(node)
+                    set_node_values(node, values);
+                    val = true;
+                    return;
+                end
+            else
+                val = false;
+                return;
+            end
+        else
+            [refine_node, values] = fvisit(node,fsemilag,t(VNEXTSTEP));
+            if refine_node
+                % REFINE THE NODE
+                if verbose,
+                    mid = morton_id;
+                    id = mid.id(node.level,node.anchor);
+                    fprintf('--> refine node: ')
+                    mid.print(id)
+                    fprintf(' level %2d: anchor:[%1.4f %1.4f] \n', ...
+                        node.level,node.anchor(1),node.anchor(2));
+                end
+                refine(node);
+                for kcnt=1:4, refine_tree(node.kids{kcnt},fvisit); end;
+                val = false;
+                return;
+            else
+                set_node_values(node, values);
+                val = true;
+                return;
+            end
+        end
+        
+        function set_node_values(node, values)
+            if verbose,
+                mid = morton_id;
+                id = mid.id(node.level,node.anchor);
+                fprintf('--> set semilag values for node: ')
+                mid.print(id)
+                fprintf(' level %2d: anchor:[%1.4f %1.4f] \n', ...
+                    node.level,node.anchor(1),node.anchor(2));
+            end
+            node.data.dim           = 1;
+            node.data.resolution    = resPerNode;
+            node.data.values        = values;
+        end
+    end
 
     function val = update_tree(node, fvisit)
         val = true;

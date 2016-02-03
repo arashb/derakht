@@ -29,11 +29,11 @@ fconc_exact   = @get_gaussian;
 fvel_exact    = @get_vel_exact;
 fvelx_exact   = @get_velx_exact;
 fvely_exact   = @get_vely_exact;
-fdo_refine    = @do_refine;         % refinement criterion
+%fdo_refine    = @do_refine;         % refinement criterion
+fdo_refine    = @do_refine_modified;         % refinement criterion
 
-% SIMULATION PARAMETERS BASED ON INITIAL CCONC. TREE
-max_level_list = [2];% 3];% 4 5 6];
-tn_init      = 1;
+max_level_list = [5];% 3];% 4 5 6];
+tn_init      = 200;
 for lvl =1:size(max_level_list,2)
     
     % OUTPUT FOLDER
@@ -66,16 +66,16 @@ for lvl =1:size(max_level_list,2)
     
     % VELOCITY (TIME-INDEPENDENT)
     u = qtree;
-    u.insert_function(fvelx_exact,fdo_refine,t(2));
+    u.insert_function(fvelx_exact,@do_refine,t(2));
     tree_data.init_data(u,fvelx_exact,resPerNode,t(2));
     
     v = qtree;
-    v.insert_function(fvely_exact,fdo_refine,t(2));
+    v.insert_function(fvely_exact,@do_refine,t(2));
     tree_data.init_data(v,fvely_exact,resPerNode,t(2));
     
     % CONCENTRATION TREE
     cinit = qtree;
-    cinit.insert_function(fconc_exact,fdo_refine,T_INIT);
+    cinit.insert_function(fconc_exact,@do_refine,T_INIT);
     tree_data.init_data(cinit,fconc_exact,resPerNode,T_INIT);
     
     plot_tree(cinit,0);
@@ -139,6 +139,11 @@ end
 %/* ************************************************** */
     function [val, funcval] = do_refine(qtree,func,t)
         [val, funcval] = tree_do_refine(qtree,func,maxErrorPerNode,maxLevel,resPerNode,t);
+    end
+
+    %/* ************************************************** */
+    function [val] = do_refine_modified(qtree,func,t)
+        [val] = tree_do_refine_modified(qtree,func,maxErrorPerNode,maxLevel,resPerNode,t);
     end
 
 end
