@@ -12,89 +12,90 @@
 %/* ************************************************** */
 
 function cnext = advect_tree_semilag(c,u,v,t,fdo_refine,fconc_exact,fvel_exact)
-global resPerNode;
-global verbose;
-global INTERP_TYPE;
+    global resPerNode;
+    global verbose;
+    global INTERP_TYPE;
 
-VPREVTSTEP  = 1;
-VCURTSTEP   = 2;
-VNEXTSTEP   = 3;
-V2NEXTSTEP  = 4;
+    VPREVTSTEP  = 1;
+    VCURTSTEP   = 2;
+    VNEXTSTEP   = 3;
+    V2NEXTSTEP  = 4;
 
-% % VELOCITY (TIME-DEPENDENT)
-% nt = length(t);
-% ucells = cell(1,nt);
-% vcells = cell(1,nt);
-% 
-% for tcnt = 1:nt
-%     utmptree = qtree;
-%     utmptree.insert_function(fvelx,fdo_refine,t(tcnt));
-%     tree_data.init_data(utmptree,fvelx,resPerNode,t(tcnt));
-%     ucells{tcnt} = utmptree;
-% 
-%     vtmptree = qtree;
-%     vtmptree.insert_function(fvely,fdo_refine,t(tcnt));
-%     tree_data.init_data(vtmptree,fvely,resPerNode,t(tcnt));
-%     vcells{tcnt} = vtmptree;
-% end
-% 
-% % MERGE VELOCITY TREES
-% fprintf('-> merge velocity trees\n');
-% num     = size(ucells,2);
-% um_tree = merge(ucells);
-% umcells = clone(um_tree,num);
-% vm_tree = merge(vcells);
-% vmcells = clone(vm_tree,num);
-% 
-% % INTERPOLATE VELOCITY VALUES ON THE MERGED TREES
-% fprintf('-> interpolate velocity values on the merged tree\n');
-% for i =1:num
-%     tree_data.interp(ucells{i}, umcells{i});
-%     tree_data.interp(vcells{i}, vmcells{i});
-% end
-% 
-% u = tree_data.collapse(umcells);
-% v = tree_data.collapse(vmcells);
+    % % VELOCITY (TIME-DEPENDENT)
+    % nt = length(t);
+    % ucells = cell(1,nt);
+    % vcells = cell(1,nt);
+    % 
+    % for tcnt = 1:nt
+    %     utmptree = qtree;
+    %     utmptree.insert_function(fvelx,fdo_refine,t(tcnt));
+    %     tree_data.init_data(utmptree,fvelx,resPerNode,t(tcnt));
+    %     ucells{tcnt} = utmptree;
+    % 
+    %     vtmptree = qtree;
+    %     vtmptree.insert_function(fvely,fdo_refine,t(tcnt));
+    %     tree_data.init_data(vtmptree,fvely,resPerNode,t(tcnt));
+    %     vcells{tcnt} = vtmptree;
+    % end
+    % 
+    % % MERGE VELOCITY TREES
+    % fprintf('-> merge velocity trees\n');
+    % num     = size(ucells,2);
+    % um_tree = merge(ucells);
+    % umcells = clone(um_tree,num);
+    % vm_tree = merge(vcells);
+    % vmcells = clone(vm_tree,num);
+    % 
+    % % INTERPOLATE VELOCITY VALUES ON THE MERGED TREES
+    % fprintf('-> interpolate velocity values on the merged tree\n');
+    % for i =1:num
+    %     tree_data.interp(ucells{i}, umcells{i});
+    %     tree_data.interp(vcells{i}, vmcells{i});
+    % end
+    % 
+    % u = tree_data.collapse(umcells);
+    % v = tree_data.collapse(vmcells);
 
     
-% ADVECT
-fprintf('-> compute SL\n');
+    % ADVECT
+    fprintf('-> compute SL\n');
 
-%fconc_interp    = fconc_exact;
-fconc_interp    = @conc_interp;
+    %fconc_interp    = fconc_exact;
+    fconc_interp    = @conc_interp;
 
-%fvel_interp     = fvel_exact;
-%fvel_interp     = @vel_interp;
-fvel_interp     = @vel_interp_time_independent;
+    %fvel_interp     = fvel_exact;
+    %fvel_interp     = @vel_interp;
+    fvel_interp     = @vel_interp_time_independent;
 
-%fsemilag        = fconc_exact;
-fsemilag        = @semilag;
+    %fsemilag        = fconc_exact;
+    fsemilag        = @semilag;
 
 
-% FIRST METHOD: CONSTRUCT THE NEXT TIME STEP TREE FROM SCRATCH WITH
-%               SEMILAG SOLVER AS REFINEMENT FUNCTION
-% cnext = qtree;
-% cnext.insert_function(fsemilag,fdo_refine);
-% tree_data.init_data(cnext,fsemilag,resPerNode);
+    % FIRST METHOD: CONSTRUCT THE NEXT TIME STEP TREE FROM SCRATCH WITH
+    %               SEMILAG SOLVER AS REFINEMENT FUNCTION
+    % cnext = qtree;
+    % cnext.insert_function(fsemilag,fdo_refine);
+    % tree_data.init_data(cnext,fsemilag,resPerNode);
 
-% SECOND METHOD: USE THE PREVIOUS TIME STEP TREE AS STARTING POINT
-%                REFINE/COARSEN WHENEVER IS NEEDED
-% cnext = qtree.clone(c);
-% update_tree(cnext,fdo_refine);
+    % SECOND METHOD: USE THE PREVIOUS TIME STEP TREE AS STARTING POINT
+    %                REFINE/COARSEN WHENEVER IS NEEDED
+    % cnext = qtree.clone(c);
+    % update_tree(cnext,fdo_refine);
 
-% THIRD METHOD: SEPARATE THE COMPUTATION AND REFINEMENT SECTIONS
-cnext = qtree.clone(c);
+    % THIRD METHOD: SEPARATE THE COMPUTATION AND REFINEMENT PROCESSES
+    cnext = qtree.clone(c);
 
-fprintf('Compute SL\n');
-sl_time = tic;
-tree_data.init_data(cnext,fsemilag,resPerNode);
-toc(sl_time)
+    fprintf('Compute SL\n');
+    sl_time = tic;
+    tree_data.init_data(cnext,fsemilag,resPerNode);
+    toc(sl_time)
 
-fprintf('Refine tree\n');
-rt_time = tic;
-refine_tree(cnext, fdo_refine);
-toc(rt_time)
-
+    fprintf('Refine tree\n');
+    rt_time = tic;
+    refine_tree(cnext, fdo_refine);
+    toc(rt_time)
+    
+    %/* ************************************************** */
     function do_coarsen = refine_tree(node, fvisit)
         do_coarsen = true;
         kidsval = true;
@@ -109,17 +110,14 @@ toc(rt_time)
                 else
                     % COARSEN NODE
                     if verbose,
-                        %mid = morton_id;
-                        %id = mid.id(node.level,node.anchor);
                         fprintf('--> coarsen node: ')
-                        %mid.print(id)
                         fprintf(' level %2d: anchor:[%1.4f %1.4f] \n', ...
-                            node.level,node.anchor(1),node.anchor(2));
+                                node.level,node.anchor(1),node.anchor(2));
                     end
                     coarsen(node)
                     set_node_values(node);
-                    %do_coarsen = true;
-                    do_coarsen = false;
+                    do_coarsen = true;
+                    % do_coarsen = false;
                     return;
                 end
             else do_coarsen = false; return;
@@ -129,35 +127,31 @@ toc(rt_time)
             if refine_node
                 % REFINE NODE
                 if verbose,
-                    %mid = morton_id;
-                    %id = mid.id(node.level,node.anchor);
                     fprintf('--> refine node: ')
-                    %mid.print(id)
                     fprintf(' level %2d: anchor:[%1.4f %1.4f] \n', ...
-                        node.level,node.anchor(1),node.anchor(2));
+                            node.level,node.anchor(1),node.anchor(2));
                 end
                 refine(node);
+                for kcnt=1:4, set_node_values(node.kids{kcnt}); end;
                 for kcnt=1:4, refine_tree(node.kids{kcnt},fvisit); end;
                 do_coarsen = false;
                 return;
             else
-                set_node_values(node);
+                % set_node_values(node);
                 do_coarsen = true;
                 return;
             end
         end
         
+        %/* ************************************************** */
         function set_node_values(node)
             [xxr,yyr,zzr,dx,dy,dz] = node.mesh(resPerNode);
             % compute the function values on the local grid points
             values = fsemilag(t,xxr,yyr,zzr);
             if verbose,
-                %mid = morton_id;
-                %id = mid.id(node.level,node.anchor);
                 fprintf('--> set semilag values for node: ')
-                %mid.print(id)
                 fprintf(' level %2d: anchor:[%1.4f %1.4f] \n', ...
-                    node.level,node.anchor(1),node.anchor(2));
+                        node.level,node.anchor(1),node.anchor(2));
             end
             node.data.dim           = 1;
             node.data.resolution    = resPerNode;
@@ -165,6 +159,7 @@ toc(rt_time)
         end
     end
 
+    %/* ************************************************** */
     function val = update_tree(node, fvisit)
         val = true;
         kidsval = true;
@@ -174,60 +169,52 @@ toc(rt_time)
                 kidsval = kidsval & kidval;
             end
             if kidsval
-              [refine_node, values] = fvisit(node,fsemilag,t(VNEXTSTEP));
-              if refine_node
-                 val = false;
-                 return;
-              else
-                % COARSEN THE NODE
-                if verbose,
-                  mid = morton_id;
-                  id = mid.id(node.level,node.anchor);
-                  fprintf('--> coarsen node: ')
-                  mid.print(id)
-                  fprintf(' level %2d: anchor:[%1.4f %1.4f] \n', ...
-                          node.level,node.anchor(1),node.anchor(2));
+                [refine_node, values] = fvisit(node,fsemilag,t(VNEXTSTEP));
+                if refine_node
+                    val = false;
+                    return;
+                else
+                    % COARSEN THE NODE
+                    if verbose,
+                        fprintf('--> coarsen node: ')
+                        fprintf(' level %2d: anchor:[%1.4f %1.4f] \n', ...
+                                node.level,node.anchor(1),node.anchor(2));
+                    end
+                    coarsen(node)
+                    set_node_values(node, values);
+                    val = true;
+                    return;
                 end
-                coarsen(node)
-                set_node_values(node, values);
-                val = true;
-                return;
-              end
             else
                 val = false;
                 return;
             end
         else
-          [refine_node, values] = fvisit(node,fsemilag,t(VNEXTSTEP));
-          if refine_node
-            % REFINE THE NODE
-            if verbose,
-              mid = morton_id;
-              id = mid.id(node.level,node.anchor);
-              fprintf('--> refine node: ')
-              mid.print(id)
-              fprintf(' level %2d: anchor:[%1.4f %1.4f] \n', ...
-                      node.level,node.anchor(1),node.anchor(2));
+            [refine_node, values] = fvisit(node,fsemilag,t(VNEXTSTEP));
+            if refine_node
+                % REFINE THE NODE
+                if verbose,
+                    fprintf('--> refine node: ')
+                    fprintf(' level %2d: anchor:[%1.4f %1.4f] \n', ...
+                            node.level,node.anchor(1),node.anchor(2));
+                end
+                refine(node);
+                for kcnt=1:4, update_tree(node.kids{kcnt},fvisit); end;
+                val = false;
+                return;
+            else
+                set_node_values(node, values);
+                val = true;
+                return;
             end
-            refine(node);
-            for kcnt=1:4, update_tree(node.kids{kcnt},fvisit); end;
-            val = false;
-            return;
-          else
-            set_node_values(node, values);
-            val = true;
-            return;
-          end
         end
 
+        %/* ************************************************** */
         function set_node_values(node, values)
             if verbose,
-                %mid = morton_id;
-                %id = mid.id(node.level,node.anchor);
                 fprintf('--> set semilag values for node: ')
-                %mid.print(id)
                 fprintf(' level %2d: anchor:[%1.4f %1.4f] \n', ...
-                    node.level,node.anchor(1),node.anchor(2));
+                        node.level,node.anchor(1),node.anchor(2));
             end
             node.data.dim           = 1;
             node.data.resolution    = resPerNode;
@@ -235,35 +222,39 @@ toc(rt_time)
         end
     end
 
+    %/* ************************************************** */
     function refine(node)
         node.data = [];
         node.create_kids();
     end
 
+    %/* ************************************************** */
     function coarsen(node)
         node.kids = [];
         node.isleaf = true;
     end
-
+    
+    %/* ************************************************** */
     function val = semilag(tdummy,x,y,z)
+        if verbose, fprintf('--> calling semilag function!\n'); end
         val = semilag_rk2(x,y,z,fconc_interp,fvel_interp,t);
     end
 
-%/* ************************************************** */
+    %/* ************************************************** */
     function ci = conc_interp(tq,xq,yq,zq)
         ci = tree_data.interp_points(c,xq,yq,zq,INTERP_TYPE);
         ci = conc_out(ci,xq,yq,zq);
 
         function cq = conc_out(cq,xq,yq,zq)
-            % OUTSIDE THE SIMULATION DOMAIN
-            %ce = fconc_exact(tq,xq,yq,zq);
+        % OUTSIDE THE SIMULATION DOMAIN
+        %ce = fconc_exact(tq,xq,yq,zq);
             ce = zeros(size(cq));
             out = xq<0 | xq>1  | yq<0 | yq>1 | zq<0 | zq>1;
             cq(out) = ce(out);
         end
     end
 
-%/* ************************************************** */
+    %/* ************************************************** */
     function [uq,vq,wq] = vel_interp(tq,xq,yq,zq)
         uval = tree_data.interp_points(u,xq,yq,zq);
         vval = tree_data.interp_points(v,xq,yq,zq);
@@ -271,12 +262,12 @@ toc(rt_time)
         [uq,vq,wq] = vel_out(uq,vq,wq,xq,yq,zq);
 
         function [uq,vq,wq] = vel_out(uq,vq,wq,xq,yq,zq)
-            % OUTSIDE THE SIMULATION DOMAIN
+        % OUTSIDE THE SIMULATION DOMAIN
             out = xq<0 | xq>1  | yq<0 | yq>1 | zq<0 | zq>1;
-%             [ue, ve, we] = fvel_exact(tq,xq,vq,zq);
-%             uq(out) = ue(out);
-%             vq(out) = ve(out);
-%             wq(out) = we(out);
+            %             [ue, ve, we] = fvel_exact(tq,xq,vq,zq);
+            %             uq(out) = ue(out);
+            %             vq(out) = ve(out);
+            %             wq(out) = we(out);
             ue = zeros(size(uq));
             uq(out) = ue(out);
             vq(out) = ue(out);
@@ -284,7 +275,7 @@ toc(rt_time)
         end
     end
 
-%/* ************************************************** */
+    %/* ************************************************** */
     function [uq,vq,wq] = vel_interp_time_independent(tq,xq,yq,zq)
         uval = tree_data.interp_points(u,xq,yq,zq,INTERP_TYPE);
         vval = tree_data.interp_points(v,xq,yq,zq,INTERP_TYPE);
@@ -294,7 +285,7 @@ toc(rt_time)
         [uq,vq,wq] = vel_out(uq,vq,wq,xq,yq,zq);
 
         function [uq,vq,wq] = vel_out(uq,vq,wq,xq,yq,zq)
-            % OUTSIDE THE SIMULATION DOMAIN
+        % OUTSIDE THE SIMULATION DOMAIN
             out = xq<0 | xq>1  | yq<0 | yq>1 | zq<0 | zq>1;
             [ue, ve, we] = fvel_exact(tq,xq,vq,zq);
             uq(out) = ue(out);
@@ -303,7 +294,7 @@ toc(rt_time)
         end
     end
 
-%/* ************************************************** */
+    %/* ************************************************** */
     function [mt] = merge(treecells)
         mt = treecells{1};
         for counter=2:length(treecells)
@@ -311,7 +302,7 @@ toc(rt_time)
         end
     end
 
-%/* ************************************************** */
+    %/* ************************************************** */
     function [tree_clones] = clone(tree_src, num)
         tree_clones = cell(1,num);
         for counter=1:num
