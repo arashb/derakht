@@ -35,14 +35,14 @@ classdef qtree < handle
         end
 
         %/* ************************************************** */
-        function h=width(this)
+        function h = width(this)
         % function h=width(this)
         % get the width of the square that corresponds to this node
             h = 1/2^this.level;
         end
 
         %/* ************************************************** */
-        function [xmin,xmax,ymin,ymax]=corners(this)
+        function [xmin,xmax,ymin,ymax] = corners(this)
         % function [xmin,xmax,ymin,ymax]=corners(this)
         %  get the   coordinates of the corner points of a node
         % lower left point [xmin; ymin], upper left point [xmin; ymax] etc.
@@ -60,16 +60,36 @@ classdef qtree < handle
         end
 
         %/* ************************************************** */
-        function [xxr,yyr,zzr,dx,dy,dz] = mesh(this, resPerNode)
+        function [xx,yy,zz,dx,dy,dz] = mesh(this, resPerNode, meshType)
         % get the coordinates of the corners of the current box
+            if nargin < 3, meshType = 'REGULAR' ; end;
             [xmin,xmax,ymin,ymax]=corners(this);
+
+            % CHEBYSHEV GRID
+            if strcmp(meshType,'CHEBYSHEV')
+                n1 = resPerNode+1;
+                n2 = resPerNode+1;
+                xx=ones(n1,n2);
+                yy=ones(n1,n2);
+                zz=ones(n1,n2);
+                for i=1:n1
+                    xx(i,:)=xx(i,:)*(0.5*(xmin+xmax)+ 0.5*(xmax-xmin)*cos((i-1/2)*pi/n1));
+                end
+                for j=1:n2
+                    yy(:,j)=yy(:,j)*(0.5*(ymin+ymax)+ 0.5*(ymax-ymin)*cos((j-1/2)*pi/n2));
+                end
+                dx = 0; dy = 0; dz = 0;
+                return
+            end
+
+            % REGULAR GRID
             dx = (xmax - xmin)/resPerNode;
             dy = (ymax - ymin)/resPerNode;
             dz = 0;
             % create the regular grid in the box with resolution (m+1)^2
             xr = linspace(xmin, xmax, resPerNode+1);
             yr = linspace(ymin, ymax, resPerNode+1);
-            [xxr, yyr, zzr] = meshgrid(xr,yr,1:1);
+            [xx, yy, zz] = meshgrid(xr,yr,1:1);
         end
 
 

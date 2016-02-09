@@ -1,75 +1,87 @@
 function tree_data_tst1()
 % test the interpolation of multidimensional values between two quadtrees with arbitrary
 % tree depth
-clear; clear globals; dim=2;  % constants  and preamble
-addpath('../src/common/');
-addpath('../src/tree/');
-global verbose;
-global gvfreq;
+    clear;
+    clear globals;  % constants  and preamble
 
-% RUN PARAMETERS
-maxErrorPerNode = 0.001;      % Error per box
-maxLevel        = 20;          % maximum tree depth
-verbose         = false;
-resPerNode      = 10;
-gvfreq          = 1;
+    addpath('../src/common/');
+    addpath('../src/tree/');
+    % addpath('../src/cheb/');
 
-% MAIN SCRIPT
+    global verbose;
+    global gvfreq;
+    global dim;
+    global om;
+    global resPerNode;
+    global maxErrorPerNode;
+    global maxLevel;
+    global INTERP_TYPE;
 
-% create the first tree
-o = qtree;
-o.insert_function(@func1,@do_refine);
+    % RUN PARAMETERS
+    maxErrorPerNode = 0.0001;      % Error per box
+    maxLevel        = 20;          % maximum tree depth
+    resPerNode      = 14;
+    verbose         = false;
+    gvfreq          = 0;
+    om              = 1;
+    dim             = 2;
+    % INTERP_TYPE     = 'cubic';
+    INTERP_TYPE     = 'CHEBYSHEV';
 
-% init the fist tree's data with a given function
-tree_data.init_data(o,@func3,resPerNode)
+    % MAIN SCRIPT
+    % create the first tree
+    o = qtree;
+    o.insert_function(@func1,@do_refine);
+    tree_data.init_data(o,@func1,resPerNode)
 
-% create the second tree 
-q = qtree;
-q.insert_function(@func2,@do_refine)
+    % TODO: CHECK THE ERROR
 
-% interpolate second tree's data from the first tree
-tree_data.interp(o,q);
+    % create the second tree
+    q = qtree;
+    q.insert_function(@func2,@do_refine)
 
-if verbose
-   % print morton ids, all nodes
-   disp(' all nodes');
-   o.print_mids;
-   % print morton ids, leaves only
-   disp('  leaves only');
-   o.print_mids(true);
-end
-depth=find_depth(o);
-fprintf('tree depth is %d\n', depth);
+    % interpolate second tree's data from the first tree
+    % tree_data.interp(o,q);
 
-% PLOTTING
+    if verbose
+        % print morton ids, all nodes
+        disp(' all nodes');
+        o.print_mids;
+        % print morton ids, leaves only
+        disp('  leaves only');
+        o.print_mids(true);
+    end
+    depth=find_depth(o);
+    fprintf('tree depth is %d\n', depth);
 
-subplot(3,2,1)
-tree_data.plot_grid(o)
-title('initial tree');
+    % PLOTTING
+    subplot(3,2,1)
+    tree_data.plot_grid(o)
+    title('initial tree');
 
-subplot(3,2,2)
-tree_data.plot_grid(q)
-title('interpolant tree');
+    subplot(3,2,2)
+    tree_data.plot_grid(q)
+    title('interpolant tree');
 
-subplot(3,2,3)
-o.plottree;
-tree_data.plot_data(o,1)
-title('initial first value');
+    subplot(3,2,3)
+    o.plottree;
+    tree_data.plot_data(o,1)
+    title('initial first value');
 
-subplot(3,2,4)
-q.plottree;
-tree_data.plot_data(q,1)
-title('interpolant first value');
+    subplot(3,2,4)
+    q.plottree;
+    tree_data.plot_data(q,1)
+    title('interpolant first value');
 
-subplot(3,2,5)
-o.plottree;
-tree_data.plot_data(o,2)
-title('initial second value');
+    % subplot(3,2,5)
+    % o.plottree;
+    % tree_data.plot_data(o,2)
+    % title('initial second value');
 
-subplot(3,2,6)
-q.plottree;
-tree_data.plot_data(q,2)
-title('interpolant second value');
+    % subplot(3,2,6)
+    % q.plottree;
+    % tree_data.plot_data(q,2)
+    % title('interpolant second value');
 
     function value = func1(t,x,y,z)
         xc = 0.75;
@@ -85,7 +97,7 @@ title('interpolant second value');
 
     function value = func3(t,x,y,z)
         value = zeros(size(x));
-        xc = 0.5*ones(size(x)); 
+        xc = 0.5*ones(size(x));
         yc = xc; zc = xc;
         [u,v,w] = vel_rot(t,x,y,z,xc,yc,zc);
         value(:,:,:,1) = u;

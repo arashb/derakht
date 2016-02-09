@@ -18,7 +18,7 @@ function main()
     global maxLevel;
     global INTERP_TYPE;
     global vis;
-    
+
     VPREVTSTEP  = 1;
     VCURTSTEP   = 2;
     VNEXTSTEP   = 3;
@@ -54,7 +54,7 @@ function main()
         dim             = 2
         INTERP_TYPE     = 'cubic'
         vis             = true
-        
+
         % TEMPORAL RESOLUTION
         T_INIT   = 0
         T_FINAL  = 2*pi
@@ -114,7 +114,7 @@ function main()
             t = t + dt;
         end % for time step
         tot_elapsed_time = toc(main_time);
-        
+
         % SAVE THE ERROR
         fileID = fopen([dir_name,'error.txt'],'w');
         fprintf(fileID,'# DEPTH: %3d    Q: %3d   TN:%3d   DT:%8.2e TOT_TIME: %f\n', ...
@@ -129,7 +129,7 @@ function main()
     % PLOT THE RESULTS
     function plot_tree(cnext, tstep)
         if ~vis, return; end;
-        
+
         f = figure('Name','SEMI-LAG ADVECTION','visible','off');
         %f = figure('Name','SEMI-LAG ADVECTION');
         cnext.plottree(0.5);
@@ -158,7 +158,7 @@ function main()
     % hRect = qtree.highlight_node(node, 2);
     % pause;
     % delete(hRect);
-        
+
         [val] = tree_do_refine_modified(node,func,maxErrorPerNode,maxLevel,resPerNode,t);
     end
 end
