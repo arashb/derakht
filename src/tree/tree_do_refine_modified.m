@@ -16,21 +16,15 @@ function [val] = tree_do_refine_modified(qnode, func, maxErrPerNode, maxLevel, r
 end
 
 %/* ************************************************** */
-function [err]= refine_criterion_modified(qtree, func, resPerNode,t)
+function [err] = refine_criterion_modified(qtree, func, resPerNode,t)
     global INTERP_TYPE;
     global verbose;
 
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    % compute the exact values at the center of the local REGULAR grid cells
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    % compute the center of the local REGULAR grid cells
     [xxr,yyr,zzr,dx,dy,dz] = qtree.mesh(resPerNode);
-
-    % get local grid points values
-    if ~isempty(qtree.data),
-        fre = qtree.data.values;
-    else
-        if verbose, fprintf('-> REFINE_CRITERION: compute SL on grid points!\n'); end;
-        fre = func(t,xxr,yyr,zzr);
-    end
-
-    % compute the center of the local grid cells
     xxc = xxr+dx/2;
     yyc = yyr+dy/2;
     zzc = zzr+dz/2;
@@ -42,10 +36,36 @@ function [err]= refine_criterion_modified(qtree, func, resPerNode,t)
     if verbose, fprintf('-> REFINE_CRITERION: compute SL on grid centers!\n'); end;
     fce = func(t, xxcc, yycc, zzcc);
 
-    % interpolate the function values on the center points
-    fci = interp2(xxr, yyr, fre, xxcc, yycc,INTERP_TYPE);
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    % compute the interpolated values at the center of the local REGULAR grid cells
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+    % compute the local grid points positions
+    [xxg,yyg,zzg,dx,dy,dz] = qtree.mesh(resPerNode, INTERP_TYPE);
 
+    if strcmp(INTERP_TYPE, 'CHEBYSHEV')
+        if isempty(qtree.data),
+            if verbose, fprintf('-> REFINE_CRITERION: compute SL on grid points!\n'); end;
+            fre = func(t,xxg,yyg,zzg);
+            [xmin xmax ymin ymax] = qtree.corners;
+            w = chebfun2(fre, [xmin xmax ymin ...
+                               ymax]);
+        else
+            w = qtree.data.values;
+        end
+        fci = w(xxcc, yycc);
+    else
+        if isempty(qtree.data),
+            if verbose, fprintf('-> REFINE_CRITERION: compute SL on grid points!\n'); end;
+            fre = func(t,xxg,yyg,zzg);
+        else
+            fre = qtree.data.values;
+        end
+        fci = interp2(xxg, yyg, fre, xxcc, yycc,INTERP_TYPE);
+    end
+
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     % compute interpolation error
+    %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     diff = fci - fce;
-    err = max(max(abs(diff)));
+    err = max(abs(diff(:)));
 end

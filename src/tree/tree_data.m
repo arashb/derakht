@@ -101,6 +101,7 @@ classdef tree_data < handle
         % from the values of correspoding nodes in the source tree
         % TODO: this is a brute-force algorithm. optimize it.
             global verbose;
+            global INTERP_TYPE;
 
             dst_leaves  = dst_tree.leaves();
             src_leaves  = src_tree.leaves();
@@ -112,7 +113,16 @@ classdef tree_data < handle
                 dst_leaf = dst_leaves{dst_lvcnt};
 
                 % get the mesh of destination leaf
-                [dst_xxr,dst_yyr,dst_zzr,dst_dx,dst_dy,dst_dz] = dst_leaf.mesh(resPerNode);
+                % if strcmp(INTERP_TYPE, 'CHEBYSHEV')
+                %     [dst_xxr,dst_yyr,dst_zzr,dst_dx,dst_dy,dst_dz] = ...
+                %         dst_leaf.mesh(resPerNode, 'CHEBYSHEV');
+                % else
+                %     [dst_xxr,dst_yyr,dst_zzr,dst_dx,dst_dy,dst_dz] = ...
+                %         dst_leaf.mesh(resPerNode);
+                % end
+
+                [dst_xxr,dst_yyr,dst_zzr,dst_dx,dst_dy,dst_dz] = ...
+                    dst_leaf.mesh(resPerNode, INTERP_TYPE);
 
                 % init the destination leaf data values
                 dst_leaf.data.dim = data_dim;
@@ -122,24 +132,19 @@ classdef tree_data < handle
 
                 for dimcnt = 1:data_dim
                     % interpolate the destination values from corresponding source leaves
-                    tmpval = zeros(size(dst_xxr));
-                    for src_lvcnt =1:length(src_leaves)
-                        src_leaf = src_leaves{src_lvcnt};
-
-                        % find the points inside current source leaf
-                        indices = tree_data.points_in_node(src_leaf, dst_xxr, dst_yyr);
-                        if ~any(any(indices)), continue; end;
-
-                        xx = dst_xxr(indices);
-                        yy = dst_yyr(indices);
-
-                        [src_xxr,src_yyr,src_zzr,src_dx,src_dy,src_dz] = src_leaf.mesh(resPerNode);
-
-                        interp_data = src_leaf.data.values(:,:,:,dimcnt);
-                        vv = interp2(src_xxr,src_yyr,interp_data,xx,yy);
-                        tmpval(indices) = vv;
+                    %tmpval = zeros(size(dst_xxr));
+                    tmpval = tree_data.interp_points(src_tree, ...
+                                                     dst_xxr, dst_yyr, ...
+                                                     dst_zzr, INTERP_TYPE);
+                    if strcmp(INTERP_TYPE, 'CHEBYSHEV')
+                        [xmin xmax ymin ymax] = dst_leaf.corners;
+                        w = chebfun2(tmpval, [xmin xmax ymin ...
+                                            ymax]);
+                        dst_leaf.data.values = w;
+                    else
+                        dst_leaf.data.values(:,:,:,dimcnt) = ...
+                            tmpval;
                     end
-                    dst_leaf.data.values(:,:,:,dimcnt) = tmpval;
                 end
             end
         end
@@ -164,10 +169,21 @@ classdef tree_data < handle
                     xx = xq(indices);
                     yy = yq(indices);
 
-                    [src_xxr,src_yyr,src_zzr,src_dx,src_dy,src_dz] = src_leaf.mesh(resPerNode);
-
-                    interp_data = src_leaf.data.values(:,:,:,dimcnt);
-                    vv = interp2(src_xxr,src_yyr,interp_data,xx,yy,INTERP_TYPE);
+                    if strcmp(INTERP_TYPE, 'CHEBYSHEV')
+                        global CHEB_IMPL
+                        if strcmp(CHEB_IMPL, 'IAS')
+                            % TODO
+                            vv = zeros(xx);
+                        elseif strcmp(CHEB_IMPL, 'CHEBFUN')
+                            w = src_leaf.data.values;
+                            vv = w(xx,yy);
+                        end
+                    else
+                        [src_xxr,src_yyr,src_zzr,src_dx,src_dy,src_dz] = src_leaf.mesh(resPerNode);
+                        interp_data = src_leaf.data.values(:,:,:,dimcnt);
+                        vv = interp2(src_xxr,src_yyr,interp_data,xx,yy, ...
+                                     INTERP_TYPE);
+                    end
                     tmpval(indices) = vv;
                 end
                 val(:,:,:,dimcnt) = tmpval;
@@ -176,10 +192,12 @@ classdef tree_data < handle
 
         %/* ************************************************** */
         function max_err = compute_error(tree, fexact, t,INTERP_TYPE)
-            leaves  = tree.leaves();
-            resPerNode  = leaves{1}.data.resolution;
-            data_dim    = leaves{1}.data.dim;
+            leaves     = tree.leaves();
+            resPerNode = leaves{1}.data.resolution;
+            data_dim   = leaves{1}.data.dim;
             max_err = 0;
+            max_err_pnt = [];
+            max_err_node = [];
             %for dimcnt = 1:data_dim
             for lvcnt =1:length(leaves)
                 leaf = leaves{lvcnt};
@@ -195,11 +213,15 @@ classdef tree_data < handle
 
                 vale = fexact(t,xxcc,yycc,zzcc);
 
-                valt = tree_data.interp_points(leaf,xxcc,yycc,zzcc,INTERP_TYPE);% leaf.data.values(:,:,:,dimcnt);
-                                                                                % compute interpolation error
+                valt = tree_data.interp_points(leaf,xxcc,yycc,zzcc,INTERP_TYPE);
                 diff = vale - valt;
-                err = max(max(abs(diff)));
-                if err > max_err, max_err = err; end;
+                [err, indx] = max(abs(diff(:)));
+                [i_row, i_col] = ind2sub(size(diff),indx);
+                if err > max_err
+                    max_err = err;
+                    max_err_node = leaf;
+                    max_err_pnt = [i_row, i_col];
+                end;
             end
             %end
         end
@@ -242,32 +264,47 @@ classdef tree_data < handle
             n1 = resPerNode+1;
             n2 = resPerNode+1;
 
-            % roots grid
-            i = [0:(n1-1)]';
-            j = [0:(n2-1)]';
-            x = cos((i+1/2)*pi/n1);
-            y = cos((j+1/2)*pi/n2);
+            global CHEB_IMPL;
+            if strcmp(CHEB_IMPL, 'IAS')
+                % roots grid
+                i = [0:(n1-1)]';
+                j = [0:(n2-1)]';
+                x = cos((i+1/2)*pi/n1);
+                y = cos((j+1/2)*pi/n2);
 
-            % compute the value of chebyshev polynomials at the node points.
-            Tx = tree_data.chebpoly(n1-1,x);
-            Ty = tree_data.chebpoly(n2-1,y);
+                % compute the value of chebyshev polynomials at the node points.
+                Tx = tree_data.chebpoly(n1-1,x);
+                Ty = tree_data.chebpoly(n2-1,y);
 
-            % computing the chebyshev nodes in 2d.
-            [xx,yy,zz,dx,dy,dz] = node.mesh(resPerNode, 'CHEBYSHEV');
-            % evaluate the function at cheb nodes
-            fn_val = fn(t,xx,yy,zz);
+                % computing the chebyshev nodes in 2d.
+                [xx,yy,zz,dx,dy,dz] = node.mesh(resPerNode, 'CHEBYSHEV');
+                % evaluate the function at cheb nodes
+                fn_val = fn(t,xx,yy,zz);
 
-            % using discrete orthogonality of chebyshev polynomials to compute the
-            % coefficients for approximation using chebyshev polynomial basis.
-            for i=1:n1
-                w_(i,:) = (reshape(fn_val(i,:),1,[])*Ty)*2/n2;
+                % using discrete orthogonality of chebyshev polynomials to compute the
+                % coefficients for approximation using chebyshev polynomial basis.
+                for i=1:n1
+                    w_(i,:) = (reshape(fn_val(i,:),1,[])*Ty)*2/n2;
+                end
+                for j=1:n2
+                    w(:,j) = (reshape(w_(:,j),1,[])*Tx)*2/n1;
+                end
+
+                w(1,:) = w(1,:)/2;
+                w(:,1) = w(:,1)/2;
+            elseif strcmp(CHEB_IMPL, 'CHEBFUN')
+                % CHEBFUN IMPLEMENTATION
+                [xx,yy,zz,dx,dy,dz] = node.mesh(resPerNode, 'CHEBYSHEV');
+                fn_val = fn(t,xx,yy,zz);
+                [xmin xmax ymin ymax] = node.corners;
+                w = chebfun2(fn_val, [xmin xmax ymin ymax]);
+                % w = chebfun2(fn_val, resPerNode+1, [xmin xmax ymin ...
+                %                     ymax]); % DOES NOT WORK
+                % w = chebfun2(fn_val,  [resPerNode, resPerNode],
+                % [xmin xmax ymin ymax]) % DOES NOT WORK
+                % w = chebfun2(@(x,y) fn(t, x, y, zz), resPerNode+1, ...
+                %              node.corners);
             end
-            for j=1:n2
-                w(:,j) = (reshape(w_(:,j),1,[])*Tx)*2/n1;
-            end
-
-            w(1,:) = w(1,:)/2;
-            w(:,1) = w(:,1)/2;
 
             % TODO: extend for multi-dimensional variables
             node.data.dim = 1;
@@ -282,14 +319,23 @@ classdef tree_data < handle
             n1 = resPerNode+1;
             n2 = resPerNode+1;
 
-            % roots grid
-            i = [0:(n1-1)]';
-            j = [0:(n2-1)]';
-            x = cos((i+1/2)*pi/n1);
-            y = cos((j+1/2)*pi/n2);
+            global CHEB_IMPL;
+            if strcmp(CHEB_IMPL, 'IAS')
+                % roots grid
+                i = [0:(n1-1)]';
+                j = [0:(n2-1)]';
+                x = cos((i+1/2)*pi/n1);
+                y = cos((j+1/2)*pi/n2);
 
-            w = node.data.values;
-            val = tree_data.chebeval2(w,x,y);
+                w = node.data.values;
+                val = tree_data.chebeval2(w,x,y);
+                % CHEBFUN IMPLEMENTATION
+            elseif strcmp(CHEB_IMPL, 'CHEBFUN')
+                w = node.data.values;
+                [xx,yy,zz,dx,dy,dz] = node.mesh(resPerNode, ...
+                                                'CHEBYSHEV');
+                val = w(xx,yy);
+            end
         end
 
         %Compute the values of a chebyshev approximation at a

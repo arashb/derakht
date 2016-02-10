@@ -17,6 +17,8 @@ function main()
     global maxErrorPerNode;
     global maxLevel;
     global INTERP_TYPE;
+    global CHEB_IMPL;
+    global CHEB_KIND;
     global vis;
 
     VPREVTSTEP  = 1;
@@ -33,7 +35,7 @@ function main()
     fdo_refine    = @do_refine_modified;         % refinement criterion
 
     % SIMULATION PARAMETERS BASED ON INITIAL CCONC. TREE
-    max_level_list = [15];% 4 5 6];
+    max_level_list = [4 5 6];
     tn_init      = 100;
     for lvl =1:size(max_level_list,2)
 
@@ -45,14 +47,17 @@ function main()
         diary([dir_name 'diary.txt']);
 
         % SIMULATION PARAMETERS
-        maxErrorPerNode = 1e-4                              % Error per box
+        maxErrorPerNode = 1e-30                              % Error per box
         maxLevel        = max_level_list(lvl)               % Maximum tree depth
-        resPerNode      = 15                                 % Resolution per Node
+        resPerNode      = 3                                 % Resolution per Node
         verbose         = false
         gvfreq          = 0
         om              = 1
         dim             = 2
         INTERP_TYPE     = 'cubic'
+        INTERP_TYPE     = 'CHEBYSHEV'
+        CHEB_IMPL       = 'CHEBFUN'
+        CHEB_KIND       = 2
         vis             = true
 
         % TEMPORAL RESOLUTION

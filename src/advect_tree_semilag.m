@@ -25,19 +25,19 @@ function cnext = advect_tree_semilag(c,u,v,t,fdo_refine,fconc_exact,fvel_exact)
     % nt = length(t);
     % ucells = cell(1,nt);
     % vcells = cell(1,nt);
-    % 
+    %
     % for tcnt = 1:nt
     %     utmptree = qtree;
     %     utmptree.insert_function(fvelx,fdo_refine,t(tcnt));
     %     tree_data.init_data(utmptree,fvelx,resPerNode,t(tcnt));
     %     ucells{tcnt} = utmptree;
-    % 
+    %
     %     vtmptree = qtree;
     %     vtmptree.insert_function(fvely,fdo_refine,t(tcnt));
     %     tree_data.init_data(vtmptree,fvely,resPerNode,t(tcnt));
     %     vcells{tcnt} = vtmptree;
     % end
-    % 
+    %
     % % MERGE VELOCITY TREES
     % fprintf('-> merge velocity trees\n');
     % num     = size(ucells,2);
@@ -45,18 +45,18 @@ function cnext = advect_tree_semilag(c,u,v,t,fdo_refine,fconc_exact,fvel_exact)
     % umcells = clone(um_tree,num);
     % vm_tree = merge(vcells);
     % vmcells = clone(vm_tree,num);
-    % 
+    %
     % % INTERPOLATE VELOCITY VALUES ON THE MERGED TREES
     % fprintf('-> interpolate velocity values on the merged tree\n');
     % for i =1:num
     %     tree_data.interp(ucells{i}, umcells{i});
     %     tree_data.interp(vcells{i}, vmcells{i});
     % end
-    % 
+    %
     % u = tree_data.collapse(umcells);
     % v = tree_data.collapse(vmcells);
 
-    
+
     % ADVECT
     fprintf('-> compute SL\n');
 
@@ -94,7 +94,7 @@ function cnext = advect_tree_semilag(c,u,v,t,fdo_refine,fconc_exact,fvel_exact)
     rt_time = tic;
     refine_tree(cnext, fdo_refine);
     toc(rt_time)
-    
+
     %/* ************************************************** */
     function do_coarsen = refine_tree(node, fvisit)
         do_coarsen = true;
@@ -142,10 +142,10 @@ function cnext = advect_tree_semilag(c,u,v,t,fdo_refine,fconc_exact,fvel_exact)
                 return;
             end
         end
-        
+
         %/* ************************************************** */
         function set_node_values(node)
-            [xxr,yyr,zzr,dx,dy,dz] = node.mesh(resPerNode);
+            [xxr,yyr,zzr,dx,dy,dz] = node.mesh(resPerNode, INTERP_TYPE);
             % compute the function values on the local grid points
             values = fsemilag(t,xxr,yyr,zzr);
             if verbose,
@@ -153,9 +153,17 @@ function cnext = advect_tree_semilag(c,u,v,t,fdo_refine,fconc_exact,fvel_exact)
                 fprintf(' level %2d: anchor:[%1.4f %1.4f] \n', ...
                         node.level,node.anchor(1),node.anchor(2));
             end
+
             node.data.dim           = 1;
             node.data.resolution    = resPerNode;
-            node.data.values        = values;
+            if strcmp(INTERP_TYPE, 'CHEBYSHEV')
+                [xmin xmax ymin ymax] = node.corners;
+                w = chebfun2(values, [xmin xmax ymin ...
+                                    ymax]);
+                node.data.values = w;
+            else
+                node.data.values = values;
+            end
         end
     end
 
@@ -233,7 +241,7 @@ function cnext = advect_tree_semilag(c,u,v,t,fdo_refine,fconc_exact,fvel_exact)
         node.kids = [];
         node.isleaf = true;
     end
-    
+
     %/* ************************************************** */
     function val = semilag(tdummy,x,y,z)
         if verbose, fprintf('--> calling semilag function!\n'); end
