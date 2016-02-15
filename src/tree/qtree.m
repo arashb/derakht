@@ -68,7 +68,6 @@ classdef qtree < handle
 
             % CHEBYSHEV GRID
             if strcmp(meshType,'CHEBYSHEV')
-                global CHEB_KIND;
                 global CHEB_IMPL;
                 n1 = resPerNode+1;
                 n2 = resPerNode+1;
@@ -76,7 +75,7 @@ classdef qtree < handle
                 % CHEBFUN IMPLEMENTATION
                 if strcmp(CHEB_IMPL, 'CHEBFUN')
                     [xx, yy] = chebpts2(n1, n2, [xmin, xmax, ymin, ...
-                                        ymax], CHEB_KIND);
+                                        ymax]);
                     zz = ones(n1,n2);
                 elseif strcmp(CHEB_IMPL, 'IAS')
                     % OUR IMPLEMENTATION
@@ -89,6 +88,13 @@ classdef qtree < handle
                     for j=1:n2
                         yy(:,j)=yy(:,j)*(0.5*(ymin+ymax)+ 0.5*(ymax-ymin)*cos((j-1/2)*pi/n2));
                     end
+                    % for i=n1:-1:1
+                    %     xx(i,:)=xx(i,:)*(0.5*(xmin+xmax)+ 0.5*(xmax-xmin)*cos((i-1/2)*pi/n1));
+                    % end
+                    % for j=n2:-1:1
+                    %     yy(:,j)=yy(:,j)*(0.5*(ymin+ymax)+ 0.5*(ymax-ymin)*cos((j-1/2)*pi/n2));
+                    % end
+
                 end
                 dx = 0; dy = 0; dz = 0;
                 return

@@ -16,12 +16,12 @@ function tree_data_tst1()
     global maxLevel;
     global INTERP_TYPE;
     global CHEB_IMPL;
-    global CHEB_KIND;
+    %global CHEB_KIND;
 
     % RUN PARAMETERS
-    maxErrorPerNode = 1e-30;      % Error per box
-    maxLevel        = 2;          % maximum tree depth
-    resPerNode      = 6;
+    maxErrorPerNode = 1e-4;       % Error per box
+    maxLevel        = 15;           % maximum tree depth
+    resPerNode      = 3;
     verbose         = false;
     gvfreq          = 0;
     om              = 1;
@@ -29,14 +29,12 @@ function tree_data_tst1()
 
     %INTERP_TYPE     = 'cubic';
     INTERP_TYPE     = 'CHEBYSHEV';
-
-    CHEB_IMPL       = 'CHEBFUN';
-    CHEB_KIND       = 2;                % TODO: currently only type
-    %                                     % 2 works
-    %CHEB_IMPL       = 'IAS';
+    %CHEB_IMPL       = 'CHEBFUN';
+    CHEB_IMPL       = 'IAS';
 
     % MAIN SCRIPT
     % create the first tree
+    disp('first tree')
     o = qtree;
     o.insert_function(@func1, @do_refine);
     tree_data.init_data(o, @func1, resPerNode);
@@ -44,19 +42,19 @@ function tree_data_tst1()
     %subplot(1,2,1)
     figure
     o.plottree;
-    tree_data.plot_data(o,1)
+    tree_data.plot_data(o,1);
+    colorbar;
     title('initial first value');
 
     % CHECK THE INPUT ERROR
-    t = 0;
-    format longE
+    % t = 0;
+    % format longE
     max_err = tree_data.compute_error(o, @func1, 0, INTERP_TYPE)
 
     % create the second tree
     q = qtree;
     q.insert_function(@func1, @do_refine);
-    % interpolate second tree's data from the first tree
-    tree_data.interp(o, q);
+    tree_data.interp_tree(o, q);
 
     %subplot(1,2,2)
     figure
