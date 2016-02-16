@@ -43,7 +43,7 @@ function [err, fre] = refine_criterion(qtree, func, resPerNode,t)
     % interpolate the function values on the center points
     if strcmp(INTERP_TYPE, 'CHEBYSHEV')
         global CHEB_IMPL;
-        w = tree_data.get_node_cheb_interpolant(qtree, fre, resPerNode);
+        w = qdata.get_node_cheb_interpolant(qtree, fre, resPerNode);
         if strcmp(CHEB_IMPL, 'IAS')
             [xmin,xmax,ymin,ymax] = qtree.corners;
             x = xxcc(1,:);
@@ -51,8 +51,7 @@ function [err, fre] = refine_criterion(qtree, func, resPerNode,t)
             % scale the query points to -1 and 1
             xs = (x - xmin)*2/(xmax-xmin)-1.0;
             ys = (y - ymin)*2/(ymax-ymin)-1.0;
-            fci = tree_data.chebeval2(w,xs,ys);
-            fci = fci';
+            fci = cheb.chebeval2(w,xs,ys);
         elseif strcmp(CHEB_IMPL, 'CHEBFUN')
             fci = w(xxcc, yycc);
         end
@@ -66,15 +65,15 @@ function [err, fre] = refine_criterion(qtree, func, resPerNode,t)
     diff = fci - fce;
     [err, indx] = max(abs(diff(:)));
     [i_row, i_col] = ind2sub(size(diff),indx);
-    % global maxErrPerNode;
-    % if err > 1e-2
-        % fci
-        % fce
-        % fprintf('COORD: (%2d, %2d)\n',         i_row, i_col);
-        % fprintf('INTRP: %1.4f\n',         fci(i_row, i_col));
-        % fprintf('EXACT: %1.4f\n',         fce(i_row, i_col));
-        % fprintf('ERROR: %1.4f\n',         err);
-        % fprintf('NODE: level %2d: anchor:[%1.4f %1.4f] \n', ...
-        %         qtree.level,qtree.anchor(1),qtree.anchor(2));
+    % global maxErrorPerNode;
+    % if err > maxErrorPerNode
+    %     fci
+    %     fce
+    %     fprintf('COORD: (%2d, %2d)\n',         i_row, i_col);
+    %     fprintf('INTRP: %1.4f\n',         fci(i_row, i_col));
+    %     fprintf('EXACT: %1.4f\n',         fce(i_row, i_col));
+    %     fprintf('ERROR: %1.4f\n',         err);
+    %     fprintf('NODE: level %2d: anchor:[%1.4f %1.4f] \n', ...
+    %             qtree.level,qtree.anchor(1),qtree.anchor(2));
     % end
 end

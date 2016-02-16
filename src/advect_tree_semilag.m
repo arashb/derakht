@@ -29,12 +29,12 @@ function cnext = advect_tree_semilag(c,u,v,t,fdo_refine,fconc_exact,fvel_exact)
     % for tcnt = 1:nt
     %     utmptree = qtree;
     %     utmptree.insert_function(fvelx,fdo_refine,t(tcnt));
-    %     tree_data.init_data(utmptree,fvelx,resPerNode,t(tcnt));
+    %     qdata.init_data(utmptree,fvelx,resPerNode,t(tcnt));
     %     ucells{tcnt} = utmptree;
     %
     %     vtmptree = qtree;
     %     vtmptree.insert_function(fvely,fdo_refine,t(tcnt));
-    %     tree_data.init_data(vtmptree,fvely,resPerNode,t(tcnt));
+    %     qdata.init_data(vtmptree,fvely,resPerNode,t(tcnt));
     %     vcells{tcnt} = vtmptree;
     % end
     %
@@ -49,12 +49,12 @@ function cnext = advect_tree_semilag(c,u,v,t,fdo_refine,fconc_exact,fvel_exact)
     % % INTERPOLATE VELOCITY VALUES ON THE MERGED TREES
     % fprintf('-> interpolate velocity values on the merged tree\n');
     % for i =1:num
-    %     tree_data.interp(ucells{i}, umcells{i});
-    %     tree_data.interp(vcells{i}, vmcells{i});
+    %     qdata.interp(ucells{i}, umcells{i});
+    %     qdata.interp(vcells{i}, vmcells{i});
     % end
     %
-    % u = tree_data.collapse(umcells);
-    % v = tree_data.collapse(vmcells);
+    % u = qdata.collapse(umcells);
+    % v = qdata.collapse(vmcells);
 
 
     % ADVECT
@@ -75,7 +75,7 @@ function cnext = advect_tree_semilag(c,u,v,t,fdo_refine,fconc_exact,fvel_exact)
     %               SEMILAG SOLVER AS REFINEMENT FUNCTION
     % cnext = qtree;
     % cnext.insert_function(fsemilag,fdo_refine);
-    % tree_data.init_data(cnext,fsemilag,resPerNode);
+    % qdata.init_data(cnext,fsemilag,resPerNode);
 
     % SECOND METHOD: USE THE PREVIOUS TIME STEP TREE AS STARTING POINT
     %                REFINE/COARSEN WHENEVER IS NEEDED
@@ -87,7 +87,7 @@ function cnext = advect_tree_semilag(c,u,v,t,fdo_refine,fconc_exact,fvel_exact)
 
     fprintf('Compute SL\n');
     sl_time = tic;
-    tree_data.init_data(cnext,fsemilag,resPerNode);
+    qdata.init_data(cnext,fsemilag,resPerNode);
     toc(sl_time)
 
     fprintf('Refine tree\n');
@@ -115,7 +115,7 @@ function cnext = advect_tree_semilag(c,u,v,t,fdo_refine,fconc_exact,fvel_exact)
                                 node.level,node.anchor(1),node.anchor(2));
                     end
                     coarsen(node)
-                    set_node_values(node);
+                    qdata.set_node_fn(node, fsemilag, resPerNode, t);
                     do_coarsen = true;
                     % do_coarsen = false;
                     return;
@@ -132,7 +132,9 @@ function cnext = advect_tree_semilag(c,u,v,t,fdo_refine,fconc_exact,fvel_exact)
                             node.level,node.anchor(1),node.anchor(2));
                 end
                 refine(node);
-                for kcnt=1:4, set_node_values(node.kids{kcnt}); end;
+                for kcnt=1:4,
+                    qdata.set_node_fn(node.kids{kcnt}, fsemilag, resPerNode, t);
+                end;
                 for kcnt=1:4, refine_tree(node.kids{kcnt},fvisit); end;
                 do_coarsen = false;
                 return;
@@ -143,28 +145,6 @@ function cnext = advect_tree_semilag(c,u,v,t,fdo_refine,fconc_exact,fvel_exact)
             end
         end
 
-        %/* ************************************************** */
-        function set_node_values(node)
-            [xxr,yyr,zzr,dx,dy,dz] = node.mesh(resPerNode, INTERP_TYPE);
-            % compute the function values on the local grid points
-            values = fsemilag(t,xxr,yyr,zzr);
-            if verbose,
-                fprintf('--> set semilag values for node: ')
-                fprintf(' level %2d: anchor:[%1.4f %1.4f] \n', ...
-                        node.level,node.anchor(1),node.anchor(2));
-            end
-
-            node.data.dim           = 1;
-            node.data.resolution    = resPerNode;
-            if strcmp(INTERP_TYPE, 'CHEBYSHEV')
-                [xmin xmax ymin ymax] = node.corners;
-                w = chebfun2(values, [xmin xmax ymin ...
-                                    ymax]);
-                node.data.values = w;
-            else
-                node.data.values = values;
-            end
-        end
     end
 
     %/* ************************************************** */
@@ -250,7 +230,7 @@ function cnext = advect_tree_semilag(c,u,v,t,fdo_refine,fconc_exact,fvel_exact)
 
     %/* ************************************************** */
     function ci = conc_interp(tq,xq,yq,zq)
-        ci = tree_data.interp_points(c,xq,yq,zq,INTERP_TYPE);
+        ci = qdata.interp_points(c,xq,yq,zq,INTERP_TYPE);
         ci = conc_out(ci,xq,yq,zq);
 
         function cq = conc_out(cq,xq,yq,zq)
@@ -264,8 +244,8 @@ function cnext = advect_tree_semilag(c,u,v,t,fdo_refine,fconc_exact,fvel_exact)
 
     %/* ************************************************** */
     function [uq,vq,wq] = vel_interp(tq,xq,yq,zq)
-        uval = tree_data.interp_points(u,xq,yq,zq);
-        vval = tree_data.interp_points(v,xq,yq,zq);
+        uval = qdata.interp_points(u,xq,yq,zq);
+        vval = qdata.interp_points(v,xq,yq,zq);
         [uq,vq,wq,] = interp_vel_temporal(uval,vval,0,t,tq,INTERP_TYPE);
         [uq,vq,wq] = vel_out(uq,vq,wq,xq,yq,zq);
 
@@ -285,8 +265,8 @@ function cnext = advect_tree_semilag(c,u,v,t,fdo_refine,fconc_exact,fvel_exact)
 
     %/* ************************************************** */
     function [uq,vq,wq] = vel_interp_time_independent(tq,xq,yq,zq)
-        uval = tree_data.interp_points(u,xq,yq,zq,INTERP_TYPE);
-        vval = tree_data.interp_points(v,xq,yq,zq,INTERP_TYPE);
+        uval = qdata.interp_points(u,xq,yq,zq,INTERP_TYPE);
+        vval = qdata.interp_points(v,xq,yq,zq,INTERP_TYPE);
         uq = uval;
         vq = vval;
         wq = zeros(size(uq));
@@ -322,52 +302,52 @@ function cnext = advect_tree_semilag(c,u,v,t,fdo_refine,fconc_exact,fvel_exact)
         figure('Name','SEMI-LAG QUAD-TREES');
         subplot(3,4,2)
         c.plottree;
-        tree_data.plot_data(c);
+        qdata.plot_data(c);
         title('c(t)');
 
         subplot(3,4,3)
         cnext.plottree;
-        tree_data.plot_data(cnext);
+        qdata.plot_data(cnext);
         title('c(t+dt)');
 
         subplot(3,4,5)
         ucells{1}.plottree;
-        tree_data.plot_data(ucells{1});
+        qdata.plot_data(ucells{1});
         title('u(t(n-1))');
 
         subplot(3,4,6)
         ucells{2}.plottree;
-        tree_data.plot_data(ucells{2});
+        qdata.plot_data(ucells{2});
         title('u(t(n))');
 
         subplot(3,4,7)
         ucells{3}.plottree;
-        tree_data.plot_data(ucells{3});
+        qdata.plot_data(ucells{3});
         title('u(t(n+1))');
 
         subplot(3,4,8)
         ucells{4}.plottree;
-        tree_data.plot_data(ucells{4});
+        qdata.plot_data(ucells{4});
         title('u(t(n+2))');
 
         subplot(3,4,9)
         vcells{1}.plottree;
-        tree_data.plot_data(vcells{1});
+        qdata.plot_data(vcells{1});
         title('v(t(n-1))');
 
         subplot(3,4,10)
         vcells{2}.plottree;
-        tree_data.plot_data(vcells{2});
+        qdata.plot_data(vcells{2});
         title('v(t(n))');
 
         subplot(3,4,11)
         vcells{3}.plottree;
-        tree_data.plot_data(vcells{3});
+        qdata.plot_data(vcells{3});
         title('v(t(n+1))');
 
         subplot(3,4,12)
         vcells{4}.plottree;
-        tree_data.plot_data(vcells{4});
+        qdata.plot_data(vcells{4});
         title('v(t(n+2))');
     end
 end

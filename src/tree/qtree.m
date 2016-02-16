@@ -71,30 +71,14 @@ classdef qtree < handle
                 global CHEB_IMPL;
                 n1 = resPerNode+1;
                 n2 = resPerNode+1;
-
+                zz = ones(n1,n2);
                 % CHEBFUN IMPLEMENTATION
                 if strcmp(CHEB_IMPL, 'CHEBFUN')
                     [xx, yy] = chebpts2(n1, n2, [xmin, xmax, ymin, ...
                                         ymax]);
-                    zz = ones(n1,n2);
                 elseif strcmp(CHEB_IMPL, 'IAS')
-                    % OUR IMPLEMENTATION
-                    xx=ones(n1,n2);
-                    yy=ones(n1,n2);
-                    zz=ones(n1,n2);
-                    for i=1:n1
-                        xx(i,:)=xx(i,:)*(0.5*(xmin+xmax)+ 0.5*(xmax-xmin)*cos((i-1/2)*pi/n1));
-                    end
-                    for j=1:n2
-                        yy(:,j)=yy(:,j)*(0.5*(ymin+ymax)+ 0.5*(ymax-ymin)*cos((j-1/2)*pi/n2));
-                    end
-                    % for i=n1:-1:1
-                    %     xx(i,:)=xx(i,:)*(0.5*(xmin+xmax)+ 0.5*(xmax-xmin)*cos((i-1/2)*pi/n1));
-                    % end
-                    % for j=n2:-1:1
-                    %     yy(:,j)=yy(:,j)*(0.5*(ymin+ymax)+ 0.5*(ymax-ymin)*cos((j-1/2)*pi/n2));
-                    % end
-
+                    [xx, yy] = cheb.chebnodes2(resPerNode, resPerNode, ...
+                                                xmin, xmax, ymin, ymax);
                 end
                 dx = 0; dy = 0; dz = 0;
                 return

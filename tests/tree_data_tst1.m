@@ -29,7 +29,7 @@ function tree_data_tst1()
 
     %INTERP_TYPE     = 'cubic';
     INTERP_TYPE     = 'CHEBYSHEV';
-    %CHEB_IMPL       = 'CHEBFUN';
+    CHEB_IMPL       = 'CHEBFUN';
     CHEB_IMPL       = 'IAS';
 
     % MAIN SCRIPT
@@ -37,35 +37,39 @@ function tree_data_tst1()
     disp('first tree')
     o = qtree;
     o.insert_function(@func1, @do_refine);
-    tree_data.init_data(o, @func1, resPerNode);
+    qdata.init_data(o, @func1, resPerNode);
 
-    %subplot(1,2,1)
     figure
     o.plottree;
-    tree_data.plot_data(o,1);
-    colorbar;
+    qdata.plot_data(o,1);
     title('initial first value');
 
-    % CHECK THE INPUT ERROR
-    % t = 0;
-    % format longE
-    max_err = tree_data.compute_error(o, @func1, 0, INTERP_TYPE)
+    max_err = qdata.compute_error(o, @func1, 0, INTERP_TYPE)
 
-    % create the second tree
+
     q = qtree;
     q.insert_function(@func1, @do_refine);
-    tree_data.interp_tree(o, q);
+    qdata.interp_tree(o, q);
 
-    %subplot(1,2,2)
     figure
     q.plottree;
-    tree_data.plot_data(q,1)
+    qdata.plot_data(q,1)
     title('interpolant first value');
 
-    max_err = tree_data.compute_error(q, @func1, 0, INTERP_TYPE)
+    max_err = qdata.compute_error(q, @func1, 0, INTERP_TYPE)
 
-    depth=find_depth(o);
-    fprintf('tree depth is %d\n', depth);
+    % p = qtree;
+    % p.insert_function(@func1, @do_refine);
+    % qdata.interp_tree(q, p);
+
+    % figure
+    % p.plottree;
+    % qdata.plot_data(p,1)
+    % title('interpolant first value');
+    % max_err = qdata.compute_error(p, @func1, 0, INTERP_TYPE)
+
+    % depth=find_depth(o);
+    % fprintf('tree depth is %d\n', depth);
 
     function value = func1(t,x,y,z)
         xc = 0.75;

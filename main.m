@@ -18,7 +18,6 @@ function main()
     global maxLevel;
     global INTERP_TYPE;
     global CHEB_IMPL;
-    global CHEB_KIND;
     global vis;
 
     VPREVTSTEP  = 1;
@@ -57,7 +56,7 @@ function main()
         INTERP_TYPE     = 'cubic'
         INTERP_TYPE     = 'CHEBYSHEV'
         CHEB_IMPL       = 'CHEBFUN'
-        CHEB_KIND       = 2
+        %CHEB_IMPL       = 'IAS'
         vis             = true
 
         % TEMPORAL RESOLUTION
@@ -73,23 +72,23 @@ function main()
         % VELOCITY (TIME-INDEPENDENT)
         u = qtree;
         u.insert_function(fvelx_exact,@do_refine,t(2));
-        tree_data.init_data(u,fvelx_exact,resPerNode,t(2));
+        qdata.init_data(u,fvelx_exact,resPerNode,t(2));
 
         v = qtree;
         v.insert_function(fvely_exact,@do_refine,t(2));
-        tree_data.init_data(v,fvely_exact,resPerNode,t(2));
+        qdata.init_data(v,fvely_exact,resPerNode,t(2));
 
         % CONCENTRATION TREE
         cinit = qtree;
         cinit.insert_function(fconc_exact,@do_refine,T_INIT);
-        tree_data.init_data(cinit,fconc_exact,resPerNode,T_INIT);
+        qdata.init_data(cinit,fconc_exact,resPerNode,T_INIT);
 
         plot_tree(cinit,0);
 
         % COMPUTE INITIAL TREES' ERRORS
         err = zeros(tn+1,2);
         err(1,1)= 0;
-        err(1,2)= tree_data.compute_error(cinit, fconc_exact, T_INIT, INTERP_TYPE);
+        err(1,2)= qdata.compute_error(cinit, fconc_exact, T_INIT, INTERP_TYPE);
 
         fprintf('DEPTH: %3d    Q: %3d   TN:%3d   DT:%8.2e\n', maxLevel, resPerNode, tn, dt);
         fprintf('INPUT ERROR: %12.2e\n', err(1,2));
@@ -108,7 +107,7 @@ function main()
             plot_tree(cnext,tstep);
 
             % COMPUTE THE ERROR
-            e = tree_data.compute_error(cnext, fconc_exact, t(VNEXTSTEP), INTERP_TYPE);
+            e = qdata.compute_error(cnext, fconc_exact, t(VNEXTSTEP), INTERP_TYPE);
             err(tstep+1,1) = tstep;
             err(tstep+1,2) = e;
             format longE
@@ -138,7 +137,7 @@ function main()
         f = figure('Name','SEMI-LAG ADVECTION','visible','off');
         %f = figure('Name','SEMI-LAG ADVECTION');
         cnext.plottree(0.5);
-        tree_data.plot_data(cnext);
+        qdata.plot_data(cnext);
         colorbar;
 
         title(['tstep: ',num2str(tstep)]);
