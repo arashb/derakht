@@ -56,7 +56,7 @@ function main()
         INTERP_TYPE     = 'cubic'
         INTERP_TYPE     = 'CHEBYSHEV'
         CHEB_IMPL       = 'CHEBFUN'
-        %CHEB_IMPL       = 'IAS'
+        CHEB_IMPL       = 'IAS'
         vis             = true
 
         % TEMPORAL RESOLUTION

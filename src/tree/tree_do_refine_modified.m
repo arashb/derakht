@@ -46,13 +46,24 @@ function [err] = refine_criterion_modified(qtree, func, resPerNode,t)
         if isempty(qtree.data),
             if verbose, fprintf('-> REFINE_CRITERION: compute SL on grid points!\n'); end;
             fre = func(t,xxg,yyg,zzg);
-            [xmin xmax ymin ymax] = qtree.corners;
-            w = chebfun2(fre, [xmin xmax ymin ...
-                               ymax]);
+            w = qdata.get_node_cheb_interpolant(qtree, fre, resPerNode);
         else
             w = qtree.data.values;
         end
-        fci = w(xxcc, yycc);
+
+        global CHEB_IMPL;
+        if strcmp(CHEB_IMPL, 'IAS')
+            [xmin,xmax,ymin,ymax] = qtree.corners;
+            x = xxcc(1,:);
+            y = yycc(:,1)';
+            % scale the query points to -1 and 1
+            xs = (x - xmin)*2/(xmax-xmin)-1.0;
+            ys = (y - ymin)*2/(ymax-ymin)-1.0;
+            fci = cheb.chebeval2(w,xs,ys);
+        elseif strcmp(CHEB_IMPL, 'CHEBFUN')
+            fci = w(xxcc, yycc);
+        end
+        %fci = w(xxcc, yycc);
     else
         if isempty(qtree.data),
             if verbose, fprintf('-> REFINE_CRITERION: compute SL on grid points!\n'); end;
