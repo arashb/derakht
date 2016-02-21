@@ -18,7 +18,7 @@ end
 %/* ************************************************** */
 function [err] = refine_criterion_modified(qtree, func, resPerNode,t)
     global INTERP_TYPE;
-    global verbose;
+    global VERBOSE;
 
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     % compute the exact values at the center of the local REGULAR grid cells
@@ -33,7 +33,7 @@ function [err] = refine_criterion_modified(qtree, func, resPerNode,t)
     zzcc = zzc(1:end-1,1:end-1);
 
     % compute the exact values on the centers
-    if verbose, fprintf('-> REFINE_CRITERION: compute SL on grid centers!\n'); end;
+    if VERBOSE, fprintf('-> REFINE_CRITERION: compute SL on grid centers!\n'); end;
     fce = func(t, xxcc, yycc, zzcc);
 
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -44,7 +44,7 @@ function [err] = refine_criterion_modified(qtree, func, resPerNode,t)
 
     if strcmp(INTERP_TYPE, 'CHEBYSHEV')
         if isempty(qtree.data),
-            if verbose, fprintf('-> REFINE_CRITERION: compute SL on grid points!\n'); end;
+            if VERBOSE, fprintf('-> REFINE_CRITERION: compute SL on grid points!\n'); end;
             fre = func(t,xxg,yyg,zzg);
             w = qdata.get_node_cheb_interpolant(qtree, fre, resPerNode);
         else
@@ -66,7 +66,7 @@ function [err] = refine_criterion_modified(qtree, func, resPerNode,t)
         %fci = w(xxcc, yycc);
     else
         if isempty(qtree.data),
-            if verbose, fprintf('-> REFINE_CRITERION: compute SL on grid points!\n'); end;
+            if VERBOSE, fprintf('-> REFINE_CRITERION: compute SL on grid points!\n'); end;
             fre = func(t,xxg,yyg,zzg);
         else
             fre = qtree.data.values;

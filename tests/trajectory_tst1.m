@@ -3,12 +3,12 @@ clear; clear globals;
 close all;
 addpath('../src/common/');
 addpath('../src/semilag/');
-global verbose;
-global gvfreq;
+global VERBOSE;
+global GVFREQ;
 
 % RUN PARAMETERS
-verbose         = false;
-gvfreq          = 1;
+VERBOSE         = false;
+GVFREQ          = 1;
 ti              = 0.5;
 tf              = 0;
 xi              = 0;

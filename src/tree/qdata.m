@@ -36,21 +36,21 @@ classdef qdata < handle
         function interp_tree(src_tree, dst_tree)
         % interpolate the values of grid points in the destination tree
         % from the values of correspoding nodes in the source tree
-            global verbose;
+            global VERBOSE;
             global INTERP_TYPE;
-            global resPerNode;
+            global RES_PER_NODE;
             dst_leaves  = dst_tree.leaves();
             for dst_lvcnt = 1:length(dst_leaves)
                 dst_leaf = dst_leaves{dst_lvcnt};
-                [xx,yy,zz,dx,dy,dz] = dst_leaf.mesh(resPerNode, INTERP_TYPE);
+                [xx,yy,zz,dx,dy,dz] = dst_leaf.mesh(RES_PER_NODE, INTERP_TYPE);
                 tmpval = qdata.interp_points(src_tree, xx, yy, zz, INTERP_TYPE);
-                qdata.set_node_val(dst_leaf, tmpval, resPerNode);
+                qdata.set_node_val(dst_leaf, tmpval, RES_PER_NODE);
             end
         end
 
         %/* ************************************************** */
         function valq = interp_points(src_tree,xq,yq,zq,INTERP_TYPE)
-            global resPerNode;
+            global RES_PER_NODE;
             src_leaves  = src_tree.leaves();
             valq = zeros(size(xq));
             for src_lvcnt =1:length(src_leaves)
@@ -70,32 +70,16 @@ classdef qdata < handle
                         for xindx =1:size(xx,1)
                             vv(xindx) =  cheb.chebeval2(w, xs(xindx), ys(xindx));
                         end
-
-                        % xx = xq;
-                        % yy = yq;
-                        % w = src_leaf.data.values;
-                        % [xmin,xmax,ymin,ymax] = src_leaf.corners;
-                        % x = xx(1,:);
-                        % y = yy(:,1)';
-                        % % scale the query points to -1 and 1
-                        % xs = (x - xmin)*2/(xmax-xmin)-1.0;
-                        % ys = (y - ymin)*2/(ymax-ymin)-1.0;
-                        % for xindx =1:length(xs)
-                        %     for yindx=1:length(ys)
-                        %         vv2(xindx, yindx) = cheb.chebeval2(w,xs(xindx),ys(yindx));
-                        %     end
-                        % end
                     elseif strcmp(CHEB_IMPL, 'CHEBFUN')
                         w = src_leaf.data.values;
                         vv = w(xx,yy);
                     end
                 else
-                    [xxr,yyr,zzr,dx,dy,dz] = src_leaf.mesh(resPerNode);
+                    [xxr,yyr,zzr,dx,dy,dz] = src_leaf.mesh(RES_PER_NODE);
                     interp_data = src_leaf.data.values;
                     vv = interp2(xxr,yyr,interp_data,xx,yy, INTERP_TYPE);
                 end
                 valq(indices) = vv;
-                %valq = vv2
             end
         end
 
@@ -218,13 +202,13 @@ classdef qdata < handle
         %/* ************************************************** */
         function [xx,yy,vv] = grid_points(tree)
             global INTERP_TYPE;
-            global resPerNode;
+            global RES_PER_NODE;
             xx = []; yy = [];
             cleaves = tree.leaves();
             for lvcnt = 1:length(cleaves)
                 cleaf = cleaves{lvcnt};
                 if isempty(cleaf.data), continue; end;
-                [xr,yr,zr,dx,dy,dz] = cleaf.mesh(resPerNode,INTERP_TYPE);
+                [xr,yr,zr,dx,dy,dz] = cleaf.mesh(RES_PER_NODE,INTERP_TYPE);
                 xx = [xx; xr(:)];
                 yy = [yy; yr(:)];
             end

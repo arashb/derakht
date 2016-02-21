@@ -312,14 +312,14 @@ classdef qtree < handle
             %/* ************************************************** */
             function [node, counter] = construct_tree(parent, mids_list, counter)
             %if counter > length(mids_list), return; end;
-                global debug
+                % global debug
                 id = mids_list(counter);
                 mido = morton_id;
                 [lvl, anc] = mido.id2node(id);
-                if debug
-                    fprintf('construncting: %20u at level %2d: anchor:[%1.4f %1.4f]\n',...
-                            id, lvl,anc(1),anc(2));
-                end
+                % if debug
+                %     fprintf('construncting: %20u at level %2d: anchor:[%1.4f %1.4f]\n',...
+                %             id, lvl,anc(1),anc(2));
+                % end
                 node = qtree(parent, lvl, anc);
                 counter = counter+1;
 

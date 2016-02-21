@@ -11,9 +11,9 @@
 %     limitations under the License.
 %/* ************************************************** */
 
-function cnext = advect_tree_semilag(c,u,v,t,fdo_refine,fconc_exact,fvel_exact)
-    global resPerNode;
-    global verbose;
+function cnext = sl_tree(c,u,v,t,fdo_refine,fconc_exact,fvel_exact)
+    global RES_PER_NODE;
+    global VERBOSE;
     global INTERP_TYPE;
 
     VPREVTSTEP  = 1;
@@ -29,12 +29,12 @@ function cnext = advect_tree_semilag(c,u,v,t,fdo_refine,fconc_exact,fvel_exact)
     % for tcnt = 1:nt
     %     utmptree = qtree;
     %     utmptree.insert_function(fvelx,fdo_refine,t(tcnt));
-    %     qdata.init_data(utmptree,fvelx,resPerNode,t(tcnt));
+    %     qdata.init_data(utmptree,fvelx,RES_PER_NODE,t(tcnt));
     %     ucells{tcnt} = utmptree;
     %
     %     vtmptree = qtree;
     %     vtmptree.insert_function(fvely,fdo_refine,t(tcnt));
-    %     qdata.init_data(vtmptree,fvely,resPerNode,t(tcnt));
+    %     qdata.init_data(vtmptree,fvely,RES_PER_NODE,t(tcnt));
     %     vcells{tcnt} = vtmptree;
     % end
     %
@@ -56,10 +56,6 @@ function cnext = advect_tree_semilag(c,u,v,t,fdo_refine,fconc_exact,fvel_exact)
     % u = qdata.collapse(umcells);
     % v = qdata.collapse(vmcells);
 
-
-    % ADVECT
-    fprintf('-> compute SL\n');
-
     %fconc_interp    = fconc_exact;
     fconc_interp    = @conc_interp;
 
@@ -75,7 +71,7 @@ function cnext = advect_tree_semilag(c,u,v,t,fdo_refine,fconc_exact,fvel_exact)
     %               SEMILAG SOLVER AS REFINEMENT FUNCTION
     % cnext = qtree;
     % cnext.insert_function(fsemilag,fdo_refine);
-    % qdata.init_data(cnext,fsemilag,resPerNode);
+    % qdata.init_data(cnext,fsemilag,RES_PER_NODE);
 
     % SECOND METHOD: USE THE PREVIOUS TIME STEP TREE AS STARTING POINT
     %                REFINE/COARSEN WHENEVER IS NEEDED
@@ -85,15 +81,18 @@ function cnext = advect_tree_semilag(c,u,v,t,fdo_refine,fconc_exact,fvel_exact)
     % THIRD METHOD: SEPARATE THE COMPUTATION AND REFINEMENT PROCESSES
     cnext = qtree.clone(c);
 
-    fprintf('Compute SL\n');
+    fprintf('--> SL: ');
     sl_time = tic;
-    qdata.init_data(cnext,fsemilag,resPerNode);
-    toc(sl_time)
+    qdata.init_data(cnext,fsemilag,RES_PER_NODE);
+    fprintf('%f\n', toc(sl_time))
 
-    fprintf('Refine tree\n');
-    rt_time = tic;
-    refine_tree(cnext, fdo_refine);
-    toc(rt_time)
+    global ADAPTIVE
+    if ADAPTIVE
+        fprintf('--> Refine: ');
+        rt_time = tic;
+        refine_tree(cnext, fdo_refine);
+        fprintf('%f\n',toc(rt_time))
+    end
 
     %/* ************************************************** */
     function do_coarsen = refine_tree(node, fvisit)
@@ -109,13 +108,13 @@ function cnext = advect_tree_semilag(c,u,v,t,fdo_refine,fconc_exact,fvel_exact)
                 if refine_node, do_coarsen = false; return;
                 else
                     % COARSEN NODE
-                    if verbose,
+                    if VERBOSE,
                         fprintf('--> coarsen node: ')
                         fprintf(' level %2d: anchor:[%1.4f %1.4f] \n', ...
                                 node.level,node.anchor(1),node.anchor(2));
                     end
                     coarsen(node)
-                    qdata.set_node_fn(node, fsemilag, resPerNode, t);
+                    qdata.set_node_fn(node, fsemilag, RES_PER_NODE, t);
                     do_coarsen = true;
                     % do_coarsen = false;
                     return;
@@ -126,14 +125,14 @@ function cnext = advect_tree_semilag(c,u,v,t,fdo_refine,fconc_exact,fvel_exact)
             [refine_node] = fvisit(node,fsemilag,t(VNEXTSTEP));
             if refine_node
                 % REFINE NODE
-                if verbose,
+                if VERBOSE,
                     fprintf('--> refine node: ')
                     fprintf(' level %2d: anchor:[%1.4f %1.4f] \n', ...
                             node.level,node.anchor(1),node.anchor(2));
                 end
                 refine(node);
                 for kcnt=1:4,
-                    qdata.set_node_fn(node.kids{kcnt}, fsemilag, resPerNode, t);
+                    qdata.set_node_fn(node.kids{kcnt}, fsemilag, RES_PER_NODE, t);
                 end;
                 for kcnt=1:4, refine_tree(node.kids{kcnt},fvisit); end;
                 do_coarsen = false;
@@ -147,68 +146,68 @@ function cnext = advect_tree_semilag(c,u,v,t,fdo_refine,fconc_exact,fvel_exact)
 
     end
 
-    %/* ************************************************** */
-    function val = update_tree(node, fvisit)
-        val = true;
-        kidsval = true;
-        if ~node.isleaf
-            for k=1:4
-                kidval = update_tree(node.kids{k}, fvisit);
-                kidsval = kidsval & kidval;
-            end
-            if kidsval
-                [refine_node, values] = fvisit(node,fsemilag,t(VNEXTSTEP));
-                if refine_node
-                    val = false;
-                    return;
-                else
-                    % COARSEN THE NODE
-                    if verbose,
-                        fprintf('--> coarsen node: ')
-                        fprintf(' level %2d: anchor:[%1.4f %1.4f] \n', ...
-                                node.level,node.anchor(1),node.anchor(2));
-                    end
-                    coarsen(node)
-                    set_node_values(node, values);
-                    val = true;
-                    return;
-                end
-            else
-                val = false;
-                return;
-            end
-        else
-            [refine_node, values] = fvisit(node,fsemilag,t(VNEXTSTEP));
-            if refine_node
-                % REFINE THE NODE
-                if verbose,
-                    fprintf('--> refine node: ')
-                    fprintf(' level %2d: anchor:[%1.4f %1.4f] \n', ...
-                            node.level,node.anchor(1),node.anchor(2));
-                end
-                refine(node);
-                for kcnt=1:4, update_tree(node.kids{kcnt},fvisit); end;
-                val = false;
-                return;
-            else
-                set_node_values(node, values);
-                val = true;
-                return;
-            end
-        end
+    % %/* ************************************************** */
+    % function val = update_tree(node, fvisit)
+    %     val = true;
+    %     kidsval = true;
+    %     if ~node.isleaf
+    %         for k=1:4
+    %             kidval = update_tree(node.kids{k}, fvisit);
+    %             kidsval = kidsval & kidval;
+    %         end
+    %         if kidsval
+    %             [refine_node, values] = fvisit(node,fsemilag,t(VNEXTSTEP));
+    %             if refine_node
+    %                 val = false;
+    %                 return;
+    %             else
+    %                 % COARSEN THE NODE
+    %                 if VERBOSE,
+    %                     fprintf('--> coarsen node: ')
+    %                     fprintf(' level %2d: anchor:[%1.4f %1.4f] \n', ...
+    %                             node.level,node.anchor(1),node.anchor(2));
+    %                 end
+    %                 coarsen(node)
+    %                 set_node_values(node, values);
+    %                 val = true;
+    %                 return;
+    %             end
+    %         else
+    %             val = false;
+    %             return;
+    %         end
+    %     else
+    %         [refine_node, values] = fvisit(node,fsemilag,t(VNEXTSTEP));
+    %         if refine_node
+    %             % REFINE THE NODE
+    %             if VERBOSE,
+    %                 fprintf('--> refine node: ')
+    %                 fprintf(' level %2d: anchor:[%1.4f %1.4f] \n', ...
+    %                         node.level,node.anchor(1),node.anchor(2));
+    %             end
+    %             refine(node);
+    %             for kcnt=1:4, update_tree(node.kids{kcnt},fvisit); end;
+    %             val = false;
+    %             return;
+    %         else
+    %             set_node_values(node, values);
+    %             val = true;
+    %             return;
+    %         end
+    %     end
 
-        %/* ************************************************** */
-        function set_node_values(node, values)
-            if verbose,
-                fprintf('--> set semilag values for node: ')
-                fprintf(' level %2d: anchor:[%1.4f %1.4f] \n', ...
-                        node.level,node.anchor(1),node.anchor(2));
-            end
-            node.data.dim           = 1;
-            node.data.resolution    = resPerNode;
-            node.data.values        = values;
-        end
-    end
+    %     %/* ************************************************** */
+    %     function set_node_values(node, values)
+    %         if VERBOSE,
+    %             fprintf('--> set semilag values for node: ')
+    %             fprintf(' level %2d: anchor:[%1.4f %1.4f] \n', ...
+    %                     node.level,node.anchor(1),node.anchor(2));
+    %         end
+    %         node.data.dim           = 1;
+    %         node.data.resolution    = RES_PER_NODE;
+    %         node.data.values        = values;
+    %     end
+    % end
 
     %/* ************************************************** */
     function refine(node)
@@ -224,7 +223,7 @@ function cnext = advect_tree_semilag(c,u,v,t,fdo_refine,fconc_exact,fvel_exact)
 
     %/* ************************************************** */
     function val = semilag(tdummy,x,y,z)
-        if verbose, fprintf('--> calling semilag function!\n'); end
+        if VERBOSE, fprintf('--> calling semilag function!\n'); end
         val = semilag_rk2(x,y,z,fconc_interp,fvel_interp,t);
     end
 

@@ -12,7 +12,7 @@ end
 
 function [err, fre] = refine_criterion(qtree, func, resPerNode,t)
     global INTERP_TYPE;
-    global verbose;
+    global VERBOSE;
 
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
     % compute the exact values at the center of the local REGULAR grid cells
@@ -27,7 +27,7 @@ function [err, fre] = refine_criterion(qtree, func, resPerNode,t)
     zzcc = zzc(1:end-1,1:end-1);
 
     % compute the exact values on the centers
-    if verbose, fprintf('-> REFINE_CRITERION: compute SL on grid centers!\n'); end;
+    if VERBOSE, fprintf('-> REFINE_CRITERION: compute SL on grid centers!\n'); end;
     fce = func(t, xxcc, yycc, zzcc);
 
     %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -37,7 +37,7 @@ function [err, fre] = refine_criterion(qtree, func, resPerNode,t)
     [xxg,yyg,zzg,dx,dy,dz] = qtree.mesh(resPerNode, INTERP_TYPE);
 
     % compute the function values on the local grid points
-    if verbose, fprintf('-> REFINE_CRITERION: compute SL on grid points!\n'); end;
+    if VERBOSE, fprintf('-> REFINE_CRITERION: compute SL on grid points!\n'); end;
     fre = func(t,xxg,yyg,zzg);
 
     % interpolate the function values on the center points
@@ -65,7 +65,7 @@ function [err, fre] = refine_criterion(qtree, func, resPerNode,t)
     diff = fci - fce;
     [err, indx] = max(abs(diff(:)));
     [i_row, i_col] = ind2sub(size(diff),indx);
-    % global maxErrorPerNode;
+    % global MAX_ERROR_PER_NODE;
     % if err > maxErrorPerNode
     %     fci
     %     fce
