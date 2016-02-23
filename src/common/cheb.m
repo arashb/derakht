@@ -24,8 +24,11 @@ classdef cheb < handle
         function [x] = chebnodes1(resX, xmin, xmax)
             if nargin < 2, xmin=-1; xmax=1; end;
             n1 = resX+1;
-            i = [(n1-1):-1:0]';
-            x = 0.5*(xmin+xmax) + 0.5*(xmax-xmin).*cos((i+1/2)*pi/n1);
+            i = [0:(n1-1)]';
+            x = -cos((i+1/2)*pi/n1);
+            if nargin < 2, return; end;
+            x = 0.5*(xmin+xmax) + 0.5*(xmax-xmin).*x;
+
             % i = [0:(n1-1)]';
             % x=cos((i+1/2)*pi/n1);
         end
@@ -51,10 +54,9 @@ classdef cheb < handle
             % end
         end
 
-        function [w] = chebcoeff(fval)
-            fn_val = fval';
-            n1 = size(fn_val, 1);
-            n2 = size(fn_val, 2);
+        function [w] = chebcoeff(fn_val)
+            n2 = size(fn_val, 1);
+            n1 = size(fn_val, 2);
             x = cheb.chebnodes1(n1-1);
             y = cheb.chebnodes1(n2-1);
 
@@ -65,30 +67,31 @@ classdef cheb < handle
             % coefficients for approximation using chebyshev
             % polynomial basis.
             for i=1:n1
-                w_(i,:) = (reshape(fn_val(i,:),1,[])*Ty)*2/n2;
+                w_(:,i) = (reshape(fn_val(:,i),1,[])*Ty)*2/n2;
             end
             for j=1:n2
-                w(:,j) = (reshape(w_(:,j),1,[])*Tx)*2/n1;
+                w(j,:) = (reshape(w_(j,:),1,[])*Tx)*2/n1;
             end
             w(1,:) = w(1,:)/2;
             w(:,1) = w(:,1)/2;
         end
 
         %/* ************************************************** */
-        function [f_val] = chebeval2(w,x,y)
+        function [fval] = chebeval2(w,x,y)
         % CHEBEVAL2(W, X, Y) Compute the values of a chebyshev
         % approximation at a regular grid specified by X, Y. where
         % W is the corresponding chebyshev coefficients.
-            fval = zeros(length(x),length(y));
-            T_x = cheb.chebpoly(size(w,1)-1, x);
-            T_y = cheb.chebpoly(size(w,2)-1, y);
-            for i=1:size(w,1)
-                f_(i,:)=T_y*reshape(w(i,:),[],1);
+            fval = zeros(length(y),length(x));
+            n1 = size(w,2);
+            n2 = size(w,1);
+            T_x = cheb.chebpoly(n1-1, x);
+            T_y = cheb.chebpoly(n2-1, y);
+            for i=1:size(w,2)
+                f_(:,i)=T_y*reshape(w(:,i),[],1);
             end
             for j=1:length(y)
-                fval(:,j)=T_x*reshape(f_(:,j),[],1);
+                fval(j,:)=T_x*reshape(f_(j,:),[],1);
             end
-            f_val = fval';
         end
 
         %/* ************************************************** */

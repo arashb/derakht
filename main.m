@@ -16,6 +16,7 @@ function main()
 
     global INTERP_TYPE;
     global CHEB_IMPL;
+    % global CHEB_KIND;
 
     global TINIT;
     global TN;
@@ -23,8 +24,8 @@ function main()
 
     global OUTPUT_DIR;
 
-    ugrid_temporal_conv()
-    %ugrid_spatial_temporal_conv()
+    %ugrid_temporal_conv()
+    ugrid_spatial_temporal_conv()
 
     function ugrid_temporal_conv()
     % OUTPUT FOLDER
@@ -52,7 +53,7 @@ function main()
         INTERP_TYPE        = 'cubic';
         INTERP_TYPE        = 'CHEBYSHEV';
         CHEB_IMPL          = 'CHEBFUN';
-        %CHEB_IMPL         = 'IAS';
+        CHEB_IMPL         = 'IAS';
 
         % TEMPORAL RESOLUTION
         TINIT   = 0;
@@ -92,13 +93,14 @@ function main()
         INTERP_TYPE        = 'cubic';
         INTERP_TYPE        = 'CHEBYSHEV';
         CHEB_IMPL          = 'CHEBFUN';
-        %CHEB_IMPL         = 'IAS';
+        CHEB_IMPL          = 'IAS';
+        %CHEB_KIND          = 2;
 
         % TEMPORAL RESOLUTION
         TINIT   = 0;
         tfinal  = 2*pi;
 
-        max_level_list = [3 4 5 6];
+        max_level_list = [4 5 6];
         tn_init = 100;
         for lvl =1:size(max_level_list,2)
             MAX_LEVEL = max_level_list(lvl);   % Maximum depth
