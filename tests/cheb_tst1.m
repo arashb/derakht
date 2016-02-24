@@ -3,8 +3,8 @@ function cheb_tst1()
     close all;
     addpath('../src/common/');
 
-    % global CHEB_KIND;
-    % CHEB_KIND          = 2;
+    global CHEB_KIND;
+    CHEB_KIND          = 1;
 
     f = @(x,y) sin(x).*cos(y);
     %f = @get_gaussian;
@@ -49,15 +49,15 @@ function cheb_tst1()
     fff = fffun(xxq, yyq)
     fi = cheb.chebeval2(w, xq, yq)
 
-    % figure
-    % plot(ffun)
-    % figure
-    % plot(fffun)
-    % figure
-    % x = linspace(-1,1,100);
-    % y = x;
-    % [X,Y] = meshgrid(x, y);
-    % surf(X, Y, cheb.chebeval2(w, x, y))
+    figure
+    plot(ffun)
+    figure
+    plot(fffun)
+    figure
+    x = linspace(-1,1,100);
+    y = x;
+    [X,Y] = meshgrid(x, y);
+    surf(X, Y, cheb.chebeval2(w, x, y))
 
     dfun = fe-ff;
     fprintf('CHEBFUN ERROR: ');

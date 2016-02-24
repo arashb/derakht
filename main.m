@@ -16,7 +16,7 @@ function main()
 
     global INTERP_TYPE;
     global CHEB_IMPL;
-    % global CHEB_KIND;
+    global CHEB_KIND;
 
     global TINIT;
     global TN;
@@ -53,7 +53,8 @@ function main()
         INTERP_TYPE        = 'cubic';
         INTERP_TYPE        = 'CHEBYSHEV';
         CHEB_IMPL          = 'CHEBFUN';
-        CHEB_IMPL         = 'IAS';
+        CHEB_IMPL          = 'IAS';
+        CHEB_KIND          = 2;
 
         % TEMPORAL RESOLUTION
         TINIT   = 0;
@@ -94,7 +95,7 @@ function main()
         INTERP_TYPE        = 'CHEBYSHEV';
         CHEB_IMPL          = 'CHEBFUN';
         CHEB_IMPL          = 'IAS';
-        %CHEB_KIND          = 2;
+        CHEB_KIND          = 2;
 
         % TEMPORAL RESOLUTION
         TINIT   = 0;
