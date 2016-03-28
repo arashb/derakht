@@ -1,0 +1,41 @@
+\documentclass[border=10pt]{article}
+%%%<
+\usepackage[english]{babel}
+\usepackage{graphicx}
+\usepackage{tikz}
+
+% \usepackage{verbatim}
+
+% \usepackage{float}
+% \usepackage{graphicx}
+\usepackage{caption}
+\usepackage{subcaption}
+% \usepackage{wrapfig}
+%%%>
+
+\begin{document}
+\pagenumbering{gobble}
+\begin{figure}
+  \centering
+  \begin{subfigure}[b]{0.9\textwidth}
+      \input{../c}
+      \input{../v}
+    \caption{\textbf{Original Approach:} The trees are partitioned independently.}
+  \end{subfigure} ~ %add desired spacing between images, e. g. ~, \quad, \qquad, \hfill etc. %(or a blank line to force the subfigure onto a new line) 
+
+  \begin{subfigure}[b]{0.9\textwidth}
+      \input{../cm}
+      \input{../cm}
+    \caption{\textbf{Complete Merge:} The trees are merged and then partitioned.}
+  \end{subfigure} ~ %add desired spacing between images, e. g. ~, \quad, \qquad, \hfill etc. %(or a blank line to force the subfigure onto a new line) 
+
+  \begin{subfigure}[b]{0.9\textwidth}
+      \input{../csm}
+      \input{../vsm}
+      \caption{\textbf{Semi-Merge:} The trees are partitioned based on the merged tree without actual merge. When necessary, the breaking point is created in the tree.}
+  \end{subfigure} ~ %add desired spacing between images, e. g. ~, \quad, \qquad, \hfill etc. %(or a blank line to force the subfigure onto a new line) 
+  % \caption{Illustration of different merging schemes for concentration and velocity trees.}
+  \label{fig:oa}
+\end{figure}
+
+\end{document}

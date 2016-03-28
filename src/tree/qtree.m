@@ -139,6 +139,29 @@ classdef qtree < handle
         end
 
         %/* ************************************************** */
+        function insert_node(this, key)
+            n = this;
+            mid = morton_id;
+            while mid.id(n.level,n.anchor) < key
+                if n.isleaf
+                    n.create_kids();
+                end
+                kid_id =-1;
+                for k=1:3
+                    if mid.id(n.kids{k+1}.level,n.kids{k+1}.anchor) ...
+                            > key
+                        n = n.kids{k};
+                        kid_id = k;
+                        break;
+                    end
+                end
+                if kid_id == -1
+                    n = n.kids{4};
+                end
+            end
+        end
+
+        %/* ************************************************** */
         function idx = points_in_node(this, points)
         % function idx = points_in_node(this, points)
         % idx : logical that has true for points within the node and
@@ -282,6 +305,54 @@ classdef qtree < handle
             ylim([0 1]);
             hold off;
         end
+
+        %/* ************************************************** */
+        function plottree_tikz(this,fname, plist)
+            if nargin < 3, plist = ones(size(this.leaves)); end;
+            mycolor=[0 0 1;
+                     1 1 0;
+                     1 0 0;
+                     0 1 1;
+                     0 1 0;
+                     1 0 1;
+                     1 1 1;
+                     0 0 0;];
+
+            fid=fopen(fname,'w+');
+            fprintf(fid,'\\begin{tikzpicture} [scale=5] {\n');
+            fprintf(fid,'  \\begin{scope}[xshift=0cm,yshift=0cm,line width=0.5pt] {\n');
+
+            fprintf(fid,'  \\definecolor{lineclr}{RGB}{0,0,0};\n');
+            for i=1:8
+                fprintf(fid,'  \\definecolor{fillclr%u}{RGB}{%u,%u,%u};\n',i,mycolor(i,1)*255,mycolor(i,2)*255,mycolor(i,3)*255);
+            end
+            fprintf(fid,['  \\draw [black, opacity=0] (-0.05,-0.05) ' ...
+                         'rectangle (1.05,1.05);']);
+            lv_list = this.leaves();
+            for i=1:length(lv_list)
+                qt = lv_list{i};
+                [xmin,xmax,ymin,ymax] = qt.corners();
+                fprintf(fid,['\\draw[lineclr, fill=fillclr%u, ' ...
+                             'opacity=0.5]  (%f,%f) rectangle (%f,%f); \n'], plist(i), xmin, ymin, xmax, ymax);
+            end
+            fprintf(fid,'  }\\end{scope}\n');
+            fprintf(fid,'}\\end{tikzpicture}\n');
+
+            fclose(fid);
+        end
+
+        %/* ************************************************** */
+        function plottree_tikzNP(this,fname, np)
+            plist = qtree.partition_tree(this, np);
+            this.plottree_tikz(fname, plist);
+        end
+
+        %/* ************************************************** */
+        function plottree_tikzK(this,fname, split_key)
+            plist = qtree.partition_treeK(this, split_key);
+            this.plottree_tikz(fname, plist);
+        end
+
     end % methods
 
     methods (Static)
@@ -338,17 +409,59 @@ classdef qtree < handle
         end
 
         %/* ************************************************** */
-        function treec = merge(treea,treeb)
-            lvs_ids1 = qtree.tree2mids(treea);
-            lvs_ids2 = qtree.tree2mids(treeb);
-            lvs_ids_merged = unique([lvs_ids1, lvs_ids2]);
-            treec = qtree.mids2tree(lvs_ids_merged);
+        function tclone = clone(tree)
+            lvs_ids = qtree.tree2mids(tree);
+            tclone  = qtree.mids2tree(lvs_ids);
         end
 
         %/* ************************************************** */
-        function tree_clone = clone(tree_src)
-            lvs_ids     = qtree.tree2mids(tree_src);
-            tree_clone  = qtree.mids2tree(lvs_ids);
+        function treec = merge(treea,treeb)
+            lvs_ids1 = qtree.tree2mids(treea);
+            lvs_ids2 = qtree.tree2mids(treeb);
+            lvs_idsm = unique([lvs_ids1, lvs_ids2]);
+            treec    = qtree.mids2tree(lvs_idsm);
+        end
+
+        %/* ************************************************** */
+        function [split_list] = semi_merge(treea,treeb,np)
+            treec = qtree.merge(treea, treeb);
+            lvs_idsm = qtree.tree2mids(treec,true);
+            [plist, split_list] = qtree.partition_list(lvs_idsm, np);
+            for key_id=1:length(split_list)
+                treea.insert_node(split_list(key_id));
+                treeb.insert_node(split_list(key_id));
+            end
+        end
+
+        %/* ************************************************** */
+        function [plist]= partition_tree(tree,np)
+            lvs_ids = qtree.tree2mids(tree, true);
+            [plist, split_list] = qtree.partition_list(lvs_ids, np);
+        end
+
+        %/* ************************************************** */
+        function [plist]= partition_treeK(tree, split_key_list)
+            lvs_ids = qtree.tree2mids(tree, true);
+            [plist] = qtree.partition_listK(lvs_ids, split_key_list);
+        end
+
+        %/* ************************************************** */
+        function [plist, split_list]= partition_list(lvs_ids,np)
+            nlvs       = length(lvs_ids);      % total numer of leaves
+            psize      = ceil(nlvs/np);        % size of each paritition
+            ns         = 1:(np-1);             % number of splits
+            split_indx = ns*psize+1;             % indices of splits
+            split_list = lvs_ids(split_indx);
+            plist      = qtree.partition_listK(lvs_ids, split_list);
+        end
+
+        %/* ************************************************** */
+        function [plist]= partition_listK(lvs_ids,split_key_list)
+            np = length(split_key_list)+1; % number of partitions
+            plist = ones(size(lvs_ids))*np;
+            for i=(np-1):-1:1
+                plist(lvs_ids <= split_key_list(i)) = i;
+            end
         end
 
         %/* ************************************************** */
